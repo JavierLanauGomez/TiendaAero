@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from database import get_conexion
+from database import obtener_conexion
 
-router = APIRouter()
+enrutador = APIRouter()
 
 
 class ClienteNuevo(BaseModel):
@@ -19,9 +19,9 @@ class ClienteActualizar(BaseModel):
     direccion: str | None = None
 
 
-@router.get("/clientes")
+@enrutador.get("/clientes")
 def listar_clientes():
-    conexion = get_conexion()
+    conexion = obtener_conexion()
     cursor = conexion.cursor(dictionary=True)
     cursor.execute("SELECT * FROM clientes")
     clientes = cursor.fetchall()
@@ -30,9 +30,9 @@ def listar_clientes():
     return clientes
 
 
-@router.get("/clientes/{id}")
+@enrutador.get("/clientes/{id}")
 def obtener_cliente(id: int):
-    conexion = get_conexion()
+    conexion = obtener_conexion()
     cursor = conexion.cursor(dictionary=True)
     cursor.execute("SELECT * FROM clientes WHERE id = %s", (id,))
     cliente = cursor.fetchone()
@@ -43,9 +43,9 @@ def obtener_cliente(id: int):
     return cliente
 
 
-@router.post("/clientes", status_code=201)
+@enrutador.post("/clientes", status_code=201)
 def crear_cliente(cliente: ClienteNuevo):
-    conexion = get_conexion()
+    conexion = obtener_conexion()
     cursor = conexion.cursor()
     cursor.execute(
         "INSERT INTO clientes (nombre, email, telefono, direccion) VALUES (%s, %s, %s, %s)",
@@ -58,34 +58,34 @@ def crear_cliente(cliente: ClienteNuevo):
     return {"id": nuevo_id, "mensaje": "Cliente creado"}
 
 
-@router.put("/clientes/{id}")
+@enrutador.put("/clientes/{id}")
 def actualizar_cliente(id: int, datos: ClienteActualizar):
     campos = {k: v for k, v in datos.model_dump().items() if v is not None}
     if not campos:
         raise HTTPException(status_code=400, detail="No se enviaron campos para actualizar")
-    sql = "UPDATE clientes SET " + ", ".join(f"{k} = %s" for k in campos) + " WHERE id = %s"
+    sentencia = "UPDATE clientes SET " + ", ".join(f"{k} = %s" for k in campos) + " WHERE id = %s"
     valores = list(campos.values()) + [id]
-    conexion = get_conexion()
+    conexion = obtener_conexion()
     cursor = conexion.cursor()
-    cursor.execute(sql, valores)
+    cursor.execute(sentencia, valores)
     conexion.commit()
-    afectadas = cursor.rowcount
+    filas_afectadas = cursor.rowcount
     cursor.close()
     conexion.close()
-    if afectadas == 0:
+    if filas_afectadas == 0:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     return {"mensaje": "Cliente actualizado"}
 
 
-@router.delete("/clientes/{id}")
+@enrutador.delete("/clientes/{id}")
 def eliminar_cliente(id: int):
-    conexion = get_conexion()
+    conexion = obtener_conexion()
     cursor = conexion.cursor()
     cursor.execute("DELETE FROM clientes WHERE id = %s", (id,))
     conexion.commit()
-    afectadas = cursor.rowcount
+    filas_afectadas = cursor.rowcount
     cursor.close()
     conexion.close()
-    if afectadas == 0:
+    if filas_afectadas == 0:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     return {"mensaje": "Cliente eliminado"}

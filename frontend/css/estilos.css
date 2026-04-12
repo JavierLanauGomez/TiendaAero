@@ -1,0 +1,432 @@
+/* ============================================================
+   VARIABLES GLOBALES
+   Definimos colores y medidas en un solo lugar. Si quieres
+   cambiar el color principal, solo cambias --color-primario.
+   ============================================================ */
+:root {
+  --sidebar-ancho:    220px;
+  --color-primario:   #2563eb;
+  --color-secundario: #64748b;
+  --color-peligro:    #dc2626;
+  --color-exito:      #16a34a;
+  --color-aviso:      #d97706;
+  --sidebar-fondo:    #1e293b;
+  --sidebar-texto:    #94a3b8;
+  --sidebar-activo:   #3b82f6;
+  --fondo:            #f1f5f9;
+  --blanco:           #ffffff;
+  --borde:            #e2e8f0;
+  --texto:            #1e293b;
+  --texto-suave:      #64748b;
+  --radio:            8px;
+  --sombra:           0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================================
+   RESET Y BASE
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  color: var(--texto);
+  background: var(--fondo);
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+.sidebar {
+  width: var(--sidebar-ancho);
+  min-height: 100vh;
+  background: var(--sidebar-fondo);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.logo {
+  padding: 24px 20px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--blanco);
+  border-bottom: 1px solid #334155;
+}
+
+.nav-lista {
+  list-style: none;
+  padding: 12px 0;
+}
+
+.nav-enlace {
+  display: block;
+  padding: 12px 20px;
+  color: var(--sidebar-texto);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav-enlace:hover {
+  background: #334155;
+  color: var(--blanco);
+}
+
+.nav-enlace.activo {
+  background: #1d3461;
+  color: var(--blanco);
+  border-left-color: var(--sidebar-activo);
+}
+
+/* ============================================================
+   CONTENIDO PRINCIPAL
+   ============================================================ */
+.contenido {
+  margin-left: var(--sidebar-ancho);
+  padding: 32px;
+  flex: 1;
+}
+
+.seccion {
+  max-width: 1100px;
+}
+
+.oculta {
+  display: none !important;
+}
+
+/* ============================================================
+   CABECERA DE SECCION
+   ============================================================ */
+.sec-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.sec-cabecera h1 {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+/* ============================================================
+   BOTONES
+   ============================================================ */
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radio);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+
+.btn:hover {
+  opacity: 0.85;
+}
+
+.btn-primario {
+  background: var(--color-primario);
+  color: var(--blanco);
+}
+
+.btn-secundario {
+  background: var(--borde);
+  color: var(--texto);
+}
+
+.btn-peligro {
+  background: var(--color-peligro);
+  color: var(--blanco);
+}
+
+.btn-exito {
+  background: var(--color-exito);
+  color: var(--blanco);
+}
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* ============================================================
+   TABLA
+   ============================================================ */
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--blanco);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  overflow: hidden;
+}
+
+.tabla thead {
+  background: #f8fafc;
+}
+
+.tabla th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--texto-suave);
+  border-bottom: 1px solid var(--borde);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tabla td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--borde);
+  vertical-align: middle;
+}
+
+.tabla tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tabla tbody tr:hover {
+  background: #f8fafc;
+}
+
+.acciones {
+  display: flex;
+  gap: 6px;
+}
+
+/* ============================================================
+   BADGES (etiquetas de estado y stock)
+   ============================================================ */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.badge-pendiente { background: #fef3c7; color: #92400e; }
+.badge-enviado   { background: #dbeafe; color: #1e40af; }
+.badge-entregado { background: #dcfce7; color: #166534; }
+.badge-stock-ok  { background: #dcfce7; color: #166534; }
+.badge-stock-bajo { background: #fee2e2; color: #991b1b; }
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+.modal-fondo {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-caja {
+  background: var(--blanco);
+  border-radius: var(--radio);
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.modal-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--borde);
+}
+
+.modal-cabecera h2 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.modal-cerrar {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--texto-suave);
+  line-height: 1;
+}
+
+.modal-cerrar:hover {
+  color: var(--texto);
+}
+
+#modal-cuerpo {
+  padding: 24px;
+}
+
+/* ============================================================
+   FORMULARIOS (dentro del modal)
+   ============================================================ */
+.campo {
+  margin-bottom: 16px;
+}
+
+.campo label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.campo input,
+.campo select,
+.campo textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  font-size: 14px;
+  color: var(--texto);
+  background: var(--blanco);
+  transition: border-color 0.15s;
+}
+
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus {
+  outline: none;
+  border-color: var(--color-primario);
+}
+
+.campos-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16px;
+}
+
+.form-botones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--borde);
+}
+
+/* ============================================================
+   LINEAS DE PEDIDO (formulario nuevo pedido)
+   ============================================================ */
+.lineas-cabecera {
+  display: grid;
+  grid-template-columns: 1fr 80px 40px;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--texto-suave);
+  margin-bottom: 6px;
+}
+
+.linea-pedido {
+  display: grid;
+  grid-template-columns: 1fr 80px 40px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.linea-pedido select,
+.linea-pedido input {
+  padding: 7px 10px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  font-size: 13px;
+}
+
+.linea-pedido input[type="number"] {
+  text-align: center;
+}
+
+.btn-quitar-linea {
+  background: none;
+  border: none;
+  color: var(--color-peligro);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+}
+
+.total-pedido {
+  text-align: right;
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--borde);
+}
+
+/* ============================================================
+   TOAST (notificacion emergente)
+   ============================================================ */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 20px;
+  border-radius: var(--radio);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--blanco);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 200;
+  animation: slideIn 0.2s ease;
+}
+
+.toast-exito { background: var(--color-exito); }
+.toast-error { background: var(--color-peligro); }
+
+@keyframes slideIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ============================================================
+   MENSAJES DE ESTADO (vacio, error, cargando)
+   ============================================================ */
+.mensaje-estado {
+  padding: 40px;
+  text-align: center;
+  color: var(--texto-suave);
+  background: var(--blanco);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+}
+
+.mensaje-estado.error {
+  color: var(--color-peligro);
+}
+
+/* ============================================================
+   SELECT DE ESTADO EN TABLA DE PEDIDOS
+   ============================================================ */
+.select-estado {
+  padding: 4px 8px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  font-size: 12px;
+  cursor: pointer;
+}
