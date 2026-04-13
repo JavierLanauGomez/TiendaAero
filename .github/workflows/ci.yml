@@ -1,0 +1,112 @@
+name: CI — TiendaAero
+
+# Se ejecuta en cada push a main y en cada Pull Request
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ============================================================
+  # JOB 1: Verificacion del backend Python
+  # ============================================================
+  backend:
+    name: Backend (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Instalar dependencias
+        run: pip install -r backend/requirements.txt
+
+      - name: Comprobar sintaxis de todos los archivos Python
+        run: |
+          echo "Verificando sintaxis..."
+          python -m py_compile backend/main.py
+          python -m py_compile backend/database.py
+          python -m py_compile backend/auth.py
+          python -m py_compile backend/crear_admin.py
+          python -m py_compile backend/routers/__init__.py
+          python -m py_compile backend/routers/autenticacion.py
+          python -m py_compile backend/routers/categorias.py
+          python -m py_compile backend/routers/clientes.py
+          python -m py_compile backend/routers/pedidos.py
+          python -m py_compile backend/routers/productos.py
+          echo "Sintaxis correcta en todos los archivos."
+
+      - name: Verificar que los imports se resuelven correctamente
+        run: |
+          cd backend
+          python -c "
+          from fastapi import FastAPI, Depends
+          from fastapi.middleware.cors import CORSMiddleware
+          from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+          from pydantic import BaseModel
+          from jose import jwt
+          from passlib.context import CryptContext
+          print('Todos los imports de dependencias OK.')
+          "
+
+  # ============================================================
+  # JOB 2: Verificacion del frontend
+  # ============================================================
+  frontend:
+    name: Frontend (estructura y archivos)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Verificar que existen todos los archivos del frontend
+        run: |
+          echo "Comprobando archivos del frontend..."
+          test -f frontend/index.html         && echo "OK index.html"
+          test -f frontend/css/estilos.css    && echo "OK estilos.css"
+          test -f frontend/js/config.js       && echo "OK config.js"
+          test -f frontend/js/auth.js         && echo "OK auth.js"
+          test -f frontend/js/api.js          && echo "OK api.js"
+          test -f frontend/js/app.js          && echo "OK app.js"
+          test -f frontend/js/categorias.js   && echo "OK categorias.js"
+          test -f frontend/js/productos.js    && echo "OK productos.js"
+          test -f frontend/js/clientes.js     && echo "OK clientes.js"
+          test -f frontend/js/pedidos.js      && echo "OK pedidos.js"
+          echo "Todos los archivos del frontend presentes."
+
+      - name: Verificar que existen todos los archivos del backend
+        run: |
+          echo "Comprobando archivos del backend..."
+          test -f backend/main.py                       && echo "OK main.py"
+          test -f backend/database.py                   && echo "OK database.py"
+          test -f backend/auth.py                       && echo "OK auth.py"
+          test -f backend/requirements.txt              && echo "OK requirements.txt"
+          test -f backend/routers/autenticacion.py      && echo "OK autenticacion.py"
+          test -f backend/routers/categorias.py         && echo "OK categorias.py"
+          test -f backend/routers/productos.py          && echo "OK productos.py"
+          test -f backend/routers/clientes.py           && echo "OK clientes.py"
+          test -f backend/routers/pedidos.py            && echo "OK pedidos.py"
+          test -f database.sql                          && echo "OK database.sql"
+          echo "Todos los archivos del backend presentes."
+
+      - name: Verificar que .env no esta subido a git
+        run: |
+          if git ls-files --error-unmatch backend/.env 2>/dev/null; then
+            echo "ERROR: backend/.env esta siendo rastreado por git. Contiene credenciales."
+            exit 1
+          else
+            echo "OK: backend/.env no esta en el repositorio."
+          fi
