@@ -29,6 +29,7 @@
 22. [Frontend — pedidos.js](#22-frontend--pedidosjs)
 23. [Script de arranque](#23-script-de-arranque)
 24. [Verificación final](#24-verificación-final)
+25. [CI/CD — Despliegue automático en GitHub Pages](#25-cicd--despliegue-automático-en-github-pages)
 
 ---
 
@@ -1750,6 +1751,239 @@ FRONTEND
   ▼
 USUARIO ve el resultado
 ```
+
+---
+
+## 25. CI/CD — Despliegue automático en GitHub Pages
+
+### ¿Qué es CI/CD?
+
+**CI** significa *Continuous Integration* (Integración Continua). Cada vez que subes código a GitHub, se ejecutan verificaciones automáticas: se instalan las dependencias, se comprueba la sintaxis, se pasan los tests. Si algo falla, te avisa antes de que el error llegue a producción.
+
+**CD** significa *Continuous Deployment* (Despliegue Continuo). Cuando el código pasa las verificaciones, se despliega automáticamente en el servidor o servicio de hosting, sin que tengas que hacerlo a mano.
+
+En TiendaAero el flujo es:
+```
+git push
+    │
+    ▼
+GitHub Actions ejecuta los checks de CI (ci.yml)
+    │
+    ├── Si algo falla → te avisa con ✗ en el commit, NO despliega
+    │
+    └── Si todo pasa → ejecuta el deploy (deploy.yml)
+                           │
+                           ▼
+                  Frontend publicado en GitHub Pages
+```
+
+### ¿Qué es GitHub Actions?
+
+GitHub Actions es el sistema de automatización integrado en GitHub. Funciona con ficheros `.yml` que defines dentro de la carpeta `.github/workflows/` de tu repositorio. Cada fichero describe:
+
+- **Cuándo** ejecutarse (`on: push`, `on: pull_request`, manualmente...)
+- **Dónde** ejecutarse (una máquina virtual Ubuntu, Windows o Mac proporcionada por GitHub)
+- **Qué hacer** paso a paso (descargar el código, instalar dependencias, ejecutar comandos, desplegar...)
+
+GitHub te da **2.000 minutos gratis al mes** en repositorios públicos (prácticamente ilimitado para proyectos personales).
+
+### ¿Qué es GitHub Pages?
+
+GitHub Pages es un servicio gratuito de GitHub que publica ficheros HTML/CSS/JS estáticos como un sitio web accesible desde Internet. La URL sigue el patrón:
+
+```
+https://<usuario>.github.io/<repositorio>/
+```
+
+Para TiendaAero:
+```
+https://javierlanaugomez.github.io/TiendaAero/
+```
+
+**Limitación importante:** GitHub Pages solo sirve ficheros estáticos. El backend FastAPI **no puede desplegarse aquí** — necesita un servidor que ejecute Python. Para el backend en producción se usaría un servicio como Render, Railway o un VPS. En esta configuración, Pages sirve solo el frontend; el backend seguirá corriendo en local o en otro servidor.
+
+---
+
+### Dónde crear el fichero
+
+El fichero de despliegue vive dentro de la carpeta de workflows de GitHub Actions:
+
+```
+TiendaAero/
+└── .github/
+    └── workflows/
+        ├── ci.yml        ← ya existía (verificaciones)
+        └── deploy.yml    ← este es el nuevo
+```
+
+La carpeta `.github/` es especial: GitHub la lee automáticamente y ejecuta todo lo que encuentre dentro de `workflows/`.
+
+---
+
+### El fichero `deploy.yml` completo y explicado
+
+```yaml
+name: Deploy Frontend — GitHub Pages
+```
+El nombre que aparecerá en la pestaña Actions de GitHub.
+
+```yaml
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+```
+**¿Cuándo se ejecuta?**
+- En cada `push` a la rama `main` **que toque** algún fichero dentro de `frontend/` o el propio `deploy.yml`. Si solo cambias el backend, el deploy no se lanza innecesariamente.
+- `workflow_dispatch` → permite lanzarlo a mano desde la web de GitHub (botón "Run workflow" en la pestaña Actions).
+
+```yaml
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+```
+**Permisos del workflow.** Por seguridad, GitHub Actions no tiene permisos por defecto. Aquí declaramos exactamente los mínimos necesarios:
+- `contents: read` → puede leer el código del repo.
+- `pages: write` → puede publicar en GitHub Pages.
+- `id-token: write` → necesario para el sistema de autenticación entre Actions y Pages.
+
+```yaml
+concurrency:
+  group: pages
+  cancel-in-progress: true
+```
+**Evitar despliegues simultáneos.** Si haces dos pushes seguidos muy rápido, el primer deploy se cancela y solo se ejecuta el segundo. Así no hay dos versiones del frontend publicándose a la vez.
+
+```yaml
+jobs:
+  deploy:
+    name: Desplegar en GitHub Pages
+    runs-on: ubuntu-latest
+```
+Define el job llamado `deploy`. Se ejecuta en una máquina virtual Ubuntu que GitHub proporciona gratuitamente.
+
+```yaml
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+```
+Vincula el job al entorno "github-pages". Esto hace que GitHub muestre la URL del despliegue directamente en la pestaña Actions y en la página del commit. `${{ steps.deployment.outputs.page_url }}` es una variable que se rellena automáticamente con la URL real al terminar el deploy.
+
+```yaml
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+```
+**Paso 1.** Descarga el código del repositorio en la máquina virtual. Sin este paso, la máquina estaría vacía.
+
+```yaml
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+```
+**Paso 2.** Prepara la infraestructura de Pages en la máquina virtual (rutas base, configuración interna).
+
+```yaml
+      - name: Subir carpeta frontend como artefacto
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/
+```
+**Paso 3.** Comprime y sube la carpeta `frontend/` como un "artefacto" (un paquete temporal almacenado en GitHub). Solo se publica esta carpeta, no el backend ni ningún otro fichero del repo.
+
+```yaml
+      - name: Desplegar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+```
+**Paso 4.** Coge el artefacto del paso anterior y lo publica en GitHub Pages. Devuelve la URL pública en `steps.deployment.outputs.page_url`.
+
+---
+
+### Qué configurar en GitHub (ya configurado vía API)
+
+Para que el workflow funcione, GitHub Pages debe estar configurado para usar **GitHub Actions** como fuente (en vez de una rama). Esto ya está activado en este repositorio. Si lo hicieras manualmente:
+
+```
+GitHub → Repositorio → Settings → Pages
+  Source: GitHub Actions   ← seleccionar esto
+```
+
+Con la configuración anterior (source = rama `gh-pages`) no funcionaría porque el workflow no genera ninguna rama, sino que despliega directamente.
+
+---
+
+### Flujo completo desde el `git push` hasta el frontend publicado
+
+```
+1. Ejecutas:  git add . && git commit -m "..." && git push
+
+2. GitHub recibe el push en la rama main
+
+3. GitHub Actions detecta que hay ficheros de frontend cambiados
+   y lanza el workflow deploy.yml en una máquina virtual Ubuntu
+
+4. La máquina virtual ejecuta los 4 pasos:
+   ├── Descarga el código (checkout)
+   ├── Configura Pages
+   ├── Empaqueta frontend/ como artefacto
+   └── Publica el artefacto en Pages
+
+5. En ~30-60 segundos el frontend está disponible en:
+   https://javierlanaugomez.github.io/TiendaAero/
+
+6. GitHub muestra ✓ verde en el commit y la URL del despliegue
+   en la pestaña Actions
+```
+
+---
+
+### Preguntas frecuentes en entrevista sobre CI/CD
+
+---
+
+**P: ¿Qué es CI/CD y por qué lo usas en tu proyecto?**
+
+R: CI/CD son las siglas de Integración Continua y Despliegue Continuo. CI significa que cada vez que subo código, se ejecutan verificaciones automáticas: en mi proyecto se comprueba la sintaxis de todos los ficheros Python y que existen todos los ficheros del frontend. CD significa que si todo pasa, el frontend se despliega automáticamente en GitHub Pages sin que yo tenga que hacer nada manual. Lo uso porque es la forma profesional de trabajar: te asegura que nunca subes código roto y que el sitio siempre está actualizado con la última versión.
+
+---
+
+**P: ¿Qué es GitHub Actions?**
+
+R: Es el sistema de automatización integrado en GitHub. Funciona con ficheros YAML dentro de la carpeta `.github/workflows/`. En esos ficheros defines cuándo ejecutarse, en qué tipo de máquina y qué pasos dar. GitHub proporciona las máquinas virtuales gratis. En mi proyecto tengo dos workflows: `ci.yml` que verifica el código, y `deploy.yml` que publica el frontend en GitHub Pages.
+
+---
+
+**P: ¿Qué es GitHub Pages y qué limitaciones tiene?**
+
+R: GitHub Pages es un servicio gratuito de GitHub que publica ficheros estáticos como un sitio web accesible desde Internet. Solo sirve HTML, CSS y JavaScript — no puede ejecutar código de servidor. Por eso en mi proyecto solo el frontend está en GitHub Pages; el backend FastAPI necesita un servidor Python y no puede alojarse ahí. Para producción real, el backend iría en un servicio como Render o Railway.
+
+---
+
+**P: ¿Qué ocurre exactamente desde que haces `git push` hasta que el frontend está publicado?**
+
+R: Primero GitHub recibe el push. Detecta que hay ficheros de `frontend/` modificados y lanza el workflow `deploy.yml` en una máquina virtual Ubuntu. Esa máquina descarga el código, configura Pages, empaqueta la carpeta `frontend/` como artefacto y la publica en GitHub Pages. Todo el proceso tarda entre 30 y 60 segundos. Al terminar, GitHub muestra un tick verde en el commit y la URL del despliegue en la pestaña Actions.
+
+---
+
+**P: ¿Por qué el `deploy.yml` tiene `paths: frontend/**`?**
+
+R: Para que el workflow de despliegue solo se lance cuando realmente cambia algo del frontend. Si modifico el backend (Python, SQL) o la documentación, no tiene sentido volver a desplegar el frontend porque no ha cambiado nada. Esto ahorra tiempo y minutos de Actions.
+
+---
+
+**P: ¿Qué es `concurrency` en el workflow?**
+
+R: Es una configuración que evita despliegues simultáneos. Si hago dos commits muy seguidos, el primer deploy se cancela y solo se ejecuta el segundo. Sin esto podrían estar dos versiones del frontend publicándose a la vez y causar un estado inconsistente en Pages.
+
+---
+
+**P: ¿Por qué necesitas declarar `permissions` en el workflow?**
+
+R: Por seguridad. GitHub Actions por defecto tiene permisos mínimos. Si no declaras explícitamente qué permisos necesita el workflow, no podrá escribir en GitHub Pages aunque quieras que lo haga. Declararlos explícitamente también hace que cualquiera que lea el fichero entienda exactamente qué puede y qué no puede hacer ese workflow.
 
 ---
 
