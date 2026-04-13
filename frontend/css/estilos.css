@@ -430,3 +430,86 @@ body {
   font-size: 12px;
   cursor: pointer;
 }
+
+
+/* ============================================================
+   PANTALLA DE LOGIN
+   ============================================================ */
+.login-fondo {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fondo);
+  z-index: 100;
+}
+
+.login-caja {
+  background: var(--blanco);
+  border-radius: var(--radio);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  padding: 40px;
+  width: 100%;
+  max-width: 380px;
+}
+
+.login-logo {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-primario);
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.login-caja h2 {
+  text-align: center;
+  color: var(--texto-suave);
+  font-weight: 400;
+  margin-bottom: 24px;
+  font-size: 15px;
+}
+
+.login-error {
+  color: var(--color-peligro);
+  font-size: 13px;
+  min-height: 18px;
+  margin-bottom: 8px;
+}
+
+/* Boton de cerrar sesion en el sidebar */
+.btn-logout {
+  display: block;
+  width: calc(100% - 32px);
+  margin: auto 16px 20px;
+  padding: 8px;
+  background: transparent;
+  border: 1px solid #334155;
+  color: var(--sidebar-texto);
+  border-radius: var(--radio);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+
+.btn-logout:hover {
+  background: #334155;
+  color: var(--blanco);
+}
+
+/* El sidebar necesita flex para empujar el boton al fondo */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-lista {
+  flex: 1;
+}
+
+/* El #app ocupa todo cuando esta visible */
+#app {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+}

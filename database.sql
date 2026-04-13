@@ -88,6 +88,15 @@ CREATE TABLE detalle_pedidos (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
+CREATE TABLE usuarios (
+    id               INT          NOT NULL AUTO_INCREMENT,
+    nombre_usuario   VARCHAR(50)  NOT NULL,
+    contrasena_hash  VARCHAR(255) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_usuarios_nombre (nombre_usuario)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 -- ------------------------------------------------------------
 -- 3. Datos de ejemplo
 -- ------------------------------------------------------------

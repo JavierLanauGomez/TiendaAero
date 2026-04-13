@@ -94,8 +94,6 @@ function mostrarMensaje(idContenedor, texto, esError = false) {
 // Cuando el usuario cambia el hash en la URL (ej: hace clic en un enlace del sidebar)
 window.addEventListener('hashchange', () => navegarA(location.hash));
 
-// Cuando se carga la pagina por primera vez
-window.addEventListener('load', () => {
-  if (!location.hash) location.hash = '#categorias';
-  navegarA(location.hash);
-});
+// El evento 'load' ya no navega directamente.
+// auth.js se encarga de: mostrar login o app segun haya token,
+// y llamar a navegarA() cuando el login es correcto.

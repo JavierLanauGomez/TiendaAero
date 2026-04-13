@@ -8,57 +8,90 @@
 </head>
 <body>
 
-  <!-- BARRA LATERAL DE NAVEGACION -->
-  <nav class="sidebar">
-    <div class="logo">✈ TiendaAero</div>
-    <ul class="nav-lista">
-      <li><a href="#categorias" class="nav-enlace" data-seccion="categorias">Categorias</a></li>
-      <li><a href="#productos"  class="nav-enlace" data-seccion="productos">Productos</a></li>
-      <li><a href="#clientes"   class="nav-enlace" data-seccion="clientes">Clientes</a></li>
-      <li><a href="#pedidos"    class="nav-enlace" data-seccion="pedidos">Pedidos</a></li>
-    </ul>
-  </nav>
+  <!-- ========================================================
+       PANTALLA DE LOGIN
+       Visible cuando no hay token en localStorage.
+       Se oculta tras un login correcto.
+  ======================================================== -->
+  <div id="pantalla-login" class="login-fondo">
+    <div class="login-caja">
+      <div class="login-logo">✈ TiendaAero</div>
+      <h2>Iniciar sesion</h2>
+      <form onsubmit="enviarLogin(event)">
+        <div class="campo">
+          <label>Usuario</label>
+          <input type="text" id="login-usuario" autocomplete="username" required>
+        </div>
+        <div class="campo">
+          <label>Contraseña</label>
+          <input type="password" id="login-contrasena" autocomplete="current-password" required>
+        </div>
+        <p id="login-error" class="login-error"></p>
+        <button type="submit" class="btn btn-primario" style="width:100%">Entrar</button>
+      </form>
+    </div>
+  </div>
 
-  <!-- CONTENIDO PRINCIPAL -->
-  <main class="contenido">
+  <!-- ========================================================
+       APLICACION PRINCIPAL
+       Oculta hasta que el usuario inicia sesion.
+  ======================================================== -->
+  <div id="app" class="oculta">
 
-    <!-- SECCION CATEGORIAS -->
-    <section id="sec-categorias" class="seccion oculta">
-      <div class="sec-cabecera">
-        <h1>Categorias</h1>
-        <button class="btn btn-primario" onclick="abrirFormCategoria()">+ Nueva categoria</button>
-      </div>
-      <div id="tabla-categorias"></div>
-    </section>
+    <!-- BARRA LATERAL DE NAVEGACION -->
+    <nav class="sidebar">
+      <div class="logo">✈ TiendaAero</div>
+      <ul class="nav-lista">
+        <li><a href="#categorias" class="nav-enlace" data-seccion="categorias">Categorias</a></li>
+        <li><a href="#productos"  class="nav-enlace" data-seccion="productos">Productos</a></li>
+        <li><a href="#clientes"   class="nav-enlace" data-seccion="clientes">Clientes</a></li>
+        <li><a href="#pedidos"    class="nav-enlace" data-seccion="pedidos">Pedidos</a></li>
+      </ul>
+      <button class="btn-logout" onclick="cerrarSesion()">Cerrar sesion</button>
+    </nav>
 
-    <!-- SECCION PRODUCTOS -->
-    <section id="sec-productos" class="seccion oculta">
-      <div class="sec-cabecera">
-        <h1>Productos</h1>
-        <button class="btn btn-primario" onclick="abrirFormProducto()">+ Nuevo producto</button>
-      </div>
-      <div id="tabla-productos"></div>
-    </section>
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="contenido">
 
-    <!-- SECCION CLIENTES -->
-    <section id="sec-clientes" class="seccion oculta">
-      <div class="sec-cabecera">
-        <h1>Clientes</h1>
-        <button class="btn btn-primario" onclick="abrirFormCliente()">+ Nuevo cliente</button>
-      </div>
-      <div id="tabla-clientes"></div>
-    </section>
+      <!-- SECCION CATEGORIAS -->
+      <section id="sec-categorias" class="seccion oculta">
+        <div class="sec-cabecera">
+          <h1>Categorias</h1>
+          <button class="btn btn-primario" onclick="abrirFormCategoria()">+ Nueva categoria</button>
+        </div>
+        <div id="tabla-categorias"></div>
+      </section>
 
-    <!-- SECCION PEDIDOS -->
-    <section id="sec-pedidos" class="seccion oculta">
-      <div class="sec-cabecera">
-        <h1>Pedidos</h1>
-        <button class="btn btn-primario" onclick="abrirFormPedido()">+ Nuevo pedido</button>
-      </div>
-      <div id="tabla-pedidos"></div>
-    </section>
+      <!-- SECCION PRODUCTOS -->
+      <section id="sec-productos" class="seccion oculta">
+        <div class="sec-cabecera">
+          <h1>Productos</h1>
+          <button class="btn btn-primario" onclick="abrirFormProducto()">+ Nuevo producto</button>
+        </div>
+        <div id="tabla-productos"></div>
+      </section>
 
-  </main>
+      <!-- SECCION CLIENTES -->
+      <section id="sec-clientes" class="seccion oculta">
+        <div class="sec-cabecera">
+          <h1>Clientes</h1>
+          <button class="btn btn-primario" onclick="abrirFormCliente()">+ Nuevo cliente</button>
+        </div>
+        <div id="tabla-clientes"></div>
+      </section>
+
+      <!-- SECCION PEDIDOS -->
+      <section id="sec-pedidos" class="seccion oculta">
+        <div class="sec-cabecera">
+          <h1>Pedidos</h1>
+          <button class="btn btn-primario" onclick="abrirFormPedido()">+ Nuevo pedido</button>
+        </div>
+        <div id="tabla-pedidos"></div>
+      </section>
+
+    </main>
+
+  </div><!-- fin #app -->
 
   <!-- MODAL (ventana emergente compartida) -->
   <div id="modal" class="modal-fondo oculta">
@@ -74,8 +107,9 @@
   <!-- NOTIFICACION EMERGENTE (toast) -->
   <div id="toast" class="toast oculta"></div>
 
-  <!-- SCRIPTS — se cargan en orden porque cada uno depende del anterior -->
+  <!-- SCRIPTS en orden de dependencia -->
   <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/api.js"></script>
   <script src="js/app.js"></script>
   <script src="js/categorias.js"></script>

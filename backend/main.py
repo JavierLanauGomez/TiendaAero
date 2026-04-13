@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from routers import productos, clientes, pedidos, categorias
+from routers import productos, clientes, pedidos, categorias, autenticacion
+from auth import obtener_usuario_actual
 
 aplicacion = FastAPI()
 
@@ -11,10 +12,16 @@ aplicacion.add_middleware(
     allow_headers=["*"],
 )
 
-aplicacion.include_router(categorias.enrutador)
-aplicacion.include_router(productos.enrutador)
-aplicacion.include_router(clientes.enrutador)
-aplicacion.include_router(pedidos.enrutador)
+# El router de autenticacion NO necesita token (es el que lo genera)
+aplicacion.include_router(autenticacion.enrutador)
+
+# El resto de routers SI requieren token valido en cada peticion.
+# dependencies=[Depends(obtener_usuario_actual)] protege TODOS los
+# endpoints del router de una vez sin tocar cada funcion individualmente.
+aplicacion.include_router(categorias.enrutador, dependencies=[Depends(obtener_usuario_actual)])
+aplicacion.include_router(productos.enrutador,  dependencies=[Depends(obtener_usuario_actual)])
+aplicacion.include_router(clientes.enrutador,   dependencies=[Depends(obtener_usuario_actual)])
+aplicacion.include_router(pedidos.enrutador,    dependencies=[Depends(obtener_usuario_actual)])
 
 
 @aplicacion.get("/")
