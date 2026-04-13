@@ -16,19 +16,48 @@
   <div id="pantalla-login" class="login-fondo">
     <div class="login-caja">
       <div class="login-logo">✈ TiendaAero</div>
-      <h2>Iniciar sesion</h2>
-      <form onsubmit="enviarLogin(event)">
-        <div class="campo">
-          <label>Usuario</label>
-          <input type="text" id="login-usuario" autocomplete="username" required>
-        </div>
-        <div class="campo">
-          <label>Contraseña</label>
-          <input type="password" id="login-contrasena" autocomplete="current-password" required>
-        </div>
-        <p id="login-error" class="login-error"></p>
-        <button type="submit" class="btn btn-primario" style="width:100%">Entrar</button>
-      </form>
+
+      <!-- Formulario de LOGIN -->
+      <div id="panel-login">
+        <h2>Iniciar sesion</h2>
+        <form onsubmit="enviarLogin(event)">
+          <div class="campo">
+            <label>Usuario</label>
+            <input type="text" id="login-usuario" autocomplete="username" required>
+          </div>
+          <div class="campo">
+            <label>Contraseña</label>
+            <input type="password" id="login-contrasena" autocomplete="current-password" required>
+          </div>
+          <p id="login-error" class="login-error"></p>
+          <button type="submit" class="btn btn-primario" style="width:100%">Entrar</button>
+        </form>
+        <p class="login-cambio">¿No tienes cuenta? <a href="#" onclick="mostrarRegistro(); return false;">Crear cuenta</a></p>
+      </div>
+
+      <!-- Formulario de REGISTRO -->
+      <div id="panel-registro" class="oculta">
+        <h2>Crear cuenta</h2>
+        <form onsubmit="enviarRegistro(event)">
+          <div class="campo">
+            <label>Usuario</label>
+            <input type="text" id="reg-usuario" autocomplete="username" required>
+          </div>
+          <div class="campo">
+            <label>Contraseña</label>
+            <input type="password" id="reg-contrasena" autocomplete="new-password" required>
+          </div>
+          <div class="campo">
+            <label>Repetir contraseña</label>
+            <input type="password" id="reg-contrasena2" autocomplete="new-password" required>
+          </div>
+          <p id="reg-error" class="login-error"></p>
+          <p id="reg-exito" class="login-exito"></p>
+          <button type="submit" class="btn btn-primario" style="width:100%">Registrarse</button>
+        </form>
+        <p class="login-cambio">¿Ya tienes cuenta? <a href="#" onclick="mostrarLogin(); return false;">Iniciar sesion</a></p>
+      </div>
+
     </div>
   </div>
 

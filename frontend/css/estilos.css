@@ -477,6 +477,30 @@ body {
   margin-bottom: 8px;
 }
 
+.login-exito {
+  color: var(--color-exito);
+  font-size: 13px;
+  min-height: 18px;
+  margin-bottom: 8px;
+}
+
+.login-cambio {
+  text-align: center;
+  font-size: 13px;
+  color: var(--texto-suave);
+  margin-top: 16px;
+}
+
+.login-cambio a {
+  color: var(--color-primario);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.login-cambio a:hover {
+  text-decoration: underline;
+}
+
 /* Boton de cerrar sesion en el sidebar */
 .btn-logout {
   display: block;

@@ -30,10 +30,25 @@ function cerrarSesion() {
 function mostrarPantallaLogin() {
   document.getElementById('app').classList.add('oculta');
   document.getElementById('pantalla-login').classList.remove('oculta');
-  // Limpiar el formulario por si habia datos de antes
+  mostrarLogin();
+}
+
+function mostrarLogin() {
+  document.getElementById('panel-login').classList.remove('oculta');
+  document.getElementById('panel-registro').classList.add('oculta');
   document.getElementById('login-usuario').value = '';
   document.getElementById('login-contrasena').value = '';
   document.getElementById('login-error').textContent = '';
+}
+
+function mostrarRegistro() {
+  document.getElementById('panel-login').classList.add('oculta');
+  document.getElementById('panel-registro').classList.remove('oculta');
+  document.getElementById('reg-usuario').value = '';
+  document.getElementById('reg-contrasena').value = '';
+  document.getElementById('reg-contrasena2').value = '';
+  document.getElementById('reg-error').textContent = '';
+  document.getElementById('reg-exito').textContent = '';
 }
 
 function mostrarApp() {
@@ -76,6 +91,48 @@ async function enviarLogin(evento) {
     // Arrancar la navegacion ahora que tenemos sesion
     if (!location.hash) location.hash = '#categorias';
     navegarA(location.hash);
+
+  } catch (_) {
+    errorDiv.textContent = 'No se puede conectar con el servidor';
+  }
+}
+
+// ----------------------------------------------------------
+// SUBMIT DEL FORMULARIO DE REGISTRO
+// ----------------------------------------------------------
+async function enviarRegistro(evento) {
+  evento.preventDefault();
+
+  const usuario     = document.getElementById('reg-usuario').value.trim();
+  const contrasena  = document.getElementById('reg-contrasena').value;
+  const contrasena2 = document.getElementById('reg-contrasena2').value;
+  const errorDiv    = document.getElementById('reg-error');
+  const exitoDiv    = document.getElementById('reg-exito');
+
+  errorDiv.textContent = '';
+  exitoDiv.textContent = '';
+
+  if (contrasena !== contrasena2) {
+    errorDiv.textContent = 'Las contraseñas no coinciden';
+    return;
+  }
+
+  try {
+    const respuesta = await fetch(API_URL + '/auth/registro', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre_usuario: usuario, contrasena })
+    });
+
+    const datos = await respuesta.json().catch(() => ({}));
+
+    if (!respuesta.ok) {
+      errorDiv.textContent = datos.detail || 'Error al crear el usuario';
+      return;
+    }
+
+    exitoDiv.textContent = 'Usuario creado. Ahora puedes iniciar sesion.';
+    setTimeout(() => mostrarLogin(), 1500);
 
   } catch (_) {
     errorDiv.textContent = 'No se puede conectar con el servidor';
