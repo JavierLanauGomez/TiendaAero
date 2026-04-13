@@ -11,22 +11,24 @@
 4. [Base de datos](#4-base-de-datos)
 5. [Backend — Configuración inicial](#5-backend--configuración-inicial)
 6. [Backend — Conexión a la base de datos](#6-backend--conexión-a-la-base-de-datos)
-7. [Backend — Punto de entrada (main.py)](#7-backend--punto-de-entrada-mainpy)
-8. [Backend — Router de Categorías](#8-backend--router-de-categorías)
-9. [Backend — Router de Productos](#9-backend--router-de-productos)
-10. [Backend — Router de Clientes](#10-backend--router-de-clientes)
-11. [Backend — Router de Pedidos](#11-backend--router-de-pedidos)
-12. [Frontend — Estructura HTML](#12-frontend--estructura-html)
-13. [Frontend — Estilos CSS](#13-frontend--estilos-css)
-14. [Frontend — config.js](#14-frontend--configjs)
-15. [Frontend — api.js](#15-frontend--apijs)
-16. [Frontend — app.js](#16-frontend--appjs)
-17. [Frontend — categorias.js](#17-frontend--categoriasjs)
-18. [Frontend — productos.js](#18-frontend--productosjs)
-19. [Frontend — clientes.js](#19-frontend--clientesjs)
-20. [Frontend — pedidos.js](#20-frontend--pedidosjs)
-21. [Script de arranque](#21-script-de-arranque)
-22. [Verificación final](#22-verificación-final)
+7. [Backend — Autenticación JWT](#7-backend--autenticación-jwt)
+8. [Backend — Punto de entrada (main.py)](#8-backend--punto-de-entrada-mainpy)
+9. [Backend — Router de Categorías](#9-backend--router-de-categorías)
+10. [Backend — Router de Productos](#10-backend--router-de-productos)
+11. [Backend — Router de Clientes](#11-backend--router-de-clientes)
+12. [Backend — Router de Pedidos](#12-backend--router-de-pedidos)
+13. [Frontend — Estructura HTML](#13-frontend--estructura-html)
+14. [Frontend — Estilos CSS](#14-frontend--estilos-css)
+15. [Frontend — config.js](#15-frontend--configjs)
+16. [Frontend — auth.js](#16-frontend--authjs)
+17. [Frontend — api.js](#17-frontend--apijs)
+18. [Frontend — app.js](#18-frontend--appjs)
+19. [Frontend — categorias.js](#19-frontend--categoriasjs)
+20. [Frontend — productos.js](#20-frontend--productosjs)
+21. [Frontend — clientes.js](#21-frontend--clientesjs)
+22. [Frontend — pedidos.js](#22-frontend--pedidosjs)
+23. [Script de arranque](#23-script-de-arranque)
+24. [Verificación final](#24-verificación-final)
 
 ---
 
@@ -435,7 +437,215 @@ Principio de responsabilidad única: este módulo solo sabe cómo conectarse. El
 
 ---
 
-## 7. Backend — Punto de entrada (main.py)
+## 7. Backend — Autenticación JWT
+
+### ¿Qué es JWT y para qué sirve?
+
+Sin autenticación, cualquier persona que conozca la URL de la API puede leer, crear o borrar datos. JWT (JSON Web Token) es el mecanismo estándar para proteger una API REST.
+
+**El flujo es este:**
+
+```
+1. El usuario envia usuario + contraseña al endpoint POST /auth/login
+2. El backend verifica las credenciales contra la base de datos
+3. Si son correctas, genera un TOKEN firmado y lo devuelve
+4. El frontend guarda el token en localStorage
+5. En cada peticion siguiente, el frontend envia el token en la cabecera:
+      Authorization: Bearer eyJhbGc...
+6. El backend verifica la firma del token antes de procesar la peticion
+7. Si el token es invalido o expiro → HTTP 401, el frontend muestra el login
+```
+
+El token es como un carnet firmado por el servidor. El servidor no guarda ninguna sesion — solo verifica que la firma del token sea suya.
+
+### 7.1 Tabla de usuarios en la base de datos
+
+Añade esta tabla al final de las tablas en `database.sql`, antes de los datos de ejemplo:
+
+```sql
+CREATE TABLE usuarios (
+    id               INT          NOT NULL AUTO_INCREMENT,
+    nombre_usuario   VARCHAR(50)  NOT NULL,
+    contrasena_hash  VARCHAR(255) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_usuarios_nombre (nombre_usuario)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+- `contrasena_hash` → **nunca se guarda la contraseña en texto plano**. Se guarda el hash bcrypt, que es un valor irreversible de 60 caracteres.
+- `VARCHAR(255)` para el hash → bcrypt siempre produce 60 caracteres, pero se usa 255 por convención y compatibilidad.
+
+### 7.2 Variables de entorno nuevas
+
+Añade a `backend/.env`:
+```
+JWT_SECRET=una_clave_larga_y_aleatoria_que_solo_tu_conoces
+```
+
+Y a `backend/.env.example` la misma línea sin el valor real.
+
+**¿Para qué sirve `JWT_SECRET`?**
+Es la clave con la que el servidor firma los tokens. Si alguien la conoce, puede fabricar tokens falsos. Por eso nunca va en el código ni en GitHub.
+
+### 7.3 Nuevas dependencias
+
+Añade a `backend/requirements.txt`:
+```
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.20
+```
+
+- **python-jose** → crea y verifica tokens JWT
+- **passlib[bcrypt]** → hashea y verifica contraseñas con bcrypt
+- **python-multipart** → necesario para que FastAPI lea datos de formulario (el login usa form-data, no JSON)
+
+Instálalos:
+```bash
+pip install python-jose[cryptography] passlib[bcrypt] python-multipart
+```
+
+### 7.4 Crear `backend/auth.py`
+
+Este fichero centraliza toda la lógica de seguridad:
+
+```python
+import os
+from datetime import datetime, timedelta, timezone
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
+
+CLAVE_SECRETA      = os.getenv("JWT_SECRET", "clave_por_defecto_CAMBIAR")
+ALGORITMO          = "HS256"
+MINUTOS_EXPIRACION = 60 * 8   # token valido 8 horas
+
+contexto_pwd  = CryptContext(schemes=["bcrypt"], deprecated="auto")
+esquema_oauth2 = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+
+def verificar_contrasena(plana: str, hashed: str) -> bool:
+    return contexto_pwd.verify(plana, hashed)
+
+
+def hashear_contrasena(contrasena: str) -> str:
+    return contexto_pwd.hash(contrasena)
+
+
+def crear_token(nombre_usuario: str) -> str:
+    expiracion = datetime.now(timezone.utc) + timedelta(minutes=MINUTOS_EXPIRACION)
+    payload = {"sub": nombre_usuario, "exp": expiracion}
+    return jwt.encode(payload, CLAVE_SECRETA, algorithm=ALGORITMO)
+
+
+def obtener_usuario_actual(token: str = Depends(esquema_oauth2)) -> str:
+    """
+    Dependencia de FastAPI. Se usa en los routers para proteger endpoints.
+    Si el token falta, es invalido o expiro → HTTP 401 automatico.
+    """
+    try:
+        payload = jwt.decode(token, CLAVE_SECRETA, algorithms=[ALGORITMO])
+        usuario = payload.get("sub")
+        if usuario is None:
+            raise HTTPException(status_code=401, detail="Token invalido")
+        return usuario
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Token invalido o expirado")
+```
+
+**Conceptos clave:**
+
+- **`CryptContext(schemes=["bcrypt"])`** → configura el motor de hashing. `bcrypt` es lento por diseño (tarda ~100ms), lo que hace inviable descifrar contraseñas por fuerza bruta.
+- **`OAuth2PasswordBearer(tokenUrl="/auth/login")`** → le dice a FastAPI dónde está el endpoint de login. FastAPI también usa esto para la documentación automática en `/docs`.
+- **`Depends(esquema_oauth2)`** → cuando pones esto como parámetro de una función, FastAPI extrae automáticamente el token del header `Authorization: Bearer <token>` de la petición.
+- **`payload = {"sub": usuario, "exp": expiracion}`** → `sub` (subject) y `exp` (expiration) son campos estándar de JWT. `sub` identifica al usuario, `exp` es la fecha de expiración en timestamp Unix.
+- **HS256** → algoritmo de firma HMAC-SHA256. Usa la misma clave para firmar y verificar (simétrico). Es el estándar para APIs internas.
+
+### 7.5 Crear `backend/routers/autenticacion.py`
+
+```python
+from fastapi import APIRouter, HTTPException, Depends
+from fastapi.security import OAuth2PasswordRequestForm
+from database import obtener_conexion
+from auth import verificar_contrasena, crear_token
+
+enrutador = APIRouter(prefix="/auth", tags=["autenticacion"])
+
+
+@enrutador.post("/login")
+def login(datos: OAuth2PasswordRequestForm = Depends()):
+    conexion = obtener_conexion()
+    cursor   = conexion.cursor(dictionary=True)
+    cursor.execute(
+        "SELECT * FROM usuarios WHERE nombre_usuario = %s",
+        (datos.username,)
+    )
+    usuario = cursor.fetchone()
+    cursor.close()
+    conexion.close()
+
+    if not usuario or not verificar_contrasena(datos.password, usuario["contrasena_hash"]):
+        raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+
+    token = crear_token(usuario["nombre_usuario"])
+    return {"access_token": token, "token_type": "bearer"}
+```
+
+**¿Por qué `OAuth2PasswordRequestForm` y no un modelo Pydantic normal?**
+
+El estándar OAuth2 define que el endpoint de login debe recibir los datos como `application/x-www-form-urlencoded` (no JSON). FastAPI incluye `OAuth2PasswordRequestForm` que maneja esto automáticamente y expone `datos.username` y `datos.password`.
+
+**¿Por qué verificamos usuario Y contraseña antes de responder?**
+
+Si respondiéramos "usuario no existe" en un caso y "contraseña incorrecta" en otro, un atacante podría usar estos mensajes distintos para saber qué usuarios existen. Al dar siempre el mismo mensaje (`"Usuario o contraseña incorrectos"`), no filtramos esa información.
+
+### 7.6 Crear `backend/crear_admin.py`
+
+Las contraseñas nunca se insertan en texto plano. Este script pide los datos por consola, genera el hash y lo inserta en la base de datos:
+
+```python
+import sys
+import getpass
+from database import obtener_conexion
+from auth import hashear_contrasena
+
+def main():
+    print("=== Crear usuario administrador ===\n")
+    nombre     = input("Nombre de usuario: ").strip()
+    contrasena = getpass.getpass("Contraseña: ")
+    if len(contrasena) < 6:
+        print("La contraseña debe tener al menos 6 caracteres.")
+        sys.exit(1)
+    if contrasena != getpass.getpass("Repetir contraseña: "):
+        print("Las contraseñas no coinciden.")
+        sys.exit(1)
+    hash_ = hashear_contrasena(contrasena)
+    conexion = obtener_conexion()
+    cursor   = conexion.cursor()
+    cursor.execute(
+        "INSERT INTO usuarios (nombre_usuario, contrasena_hash) VALUES (%s, %s)",
+        (nombre, hash_)
+    )
+    conexion.commit()
+    cursor.close()
+    conexion.close()
+    print(f"\nUsuario '{nombre}' creado correctamente.")
+
+if __name__ == "__main__":
+    main()
+```
+
+**¿Por qué `getpass.getpass()`?** Oculta la contraseña mientras se escribe (no aparece en pantalla), igual que hacen todos los sistemas de login en terminal.
+
+Ejecútalo una sola vez después de crear la base de datos:
+```bash
+venv\Scripts\python.exe backend\crear_admin.py
+```
+
+---
+
+## 8. Backend — Punto de entrada (main.py)
 
 Crea `backend/main.py`:
 
@@ -488,7 +698,7 @@ type nul > backend\routers\__init__.py
 
 ---
 
-## 8. Backend — Router de Categorías
+## 9. Backend — Router de Categorías
 
 Crea `backend/routers/categorias.py`.
 
@@ -635,7 +845,7 @@ Nota: si la categoría tiene productos asociados, MySQL lanzará un error por la
 
 ---
 
-## 9. Backend — Router de Productos
+## 10. Backend — Router de Productos
 
 Crea `backend/routers/productos.py`. Sigue exactamente el mismo patrón que categorías, con una diferencia: el endpoint GET soporta filtrado por categoría.
 
@@ -689,7 +899,7 @@ Los endpoints GET por ID, POST, PUT y DELETE son idénticos al patrón de catego
 
 ---
 
-## 10. Backend — Router de Clientes
+## 11. Backend — Router de Clientes
 
 Crea `backend/routers/clientes.py`. Mismo patrón exacto que categorías y productos.
 
@@ -719,7 +929,7 @@ Los cinco endpoints (GET lista, GET por ID, POST, PUT, DELETE) siguen el mismo p
 
 ---
 
-## 11. Backend — Router de Pedidos
+## 12. Backend — Router de Pedidos
 
 Crea `backend/routers/pedidos.py`. Este es el más complejo porque crear un pedido implica lógica de negocio real.
 
@@ -872,7 +1082,7 @@ La ruta `/pedidos/{id}/estado` (con subruta) en vez de un PUT general al pedido 
 
 ---
 
-## 12. Frontend — Estructura HTML
+## 13. Frontend — Estructura HTML
 
 Crea `frontend/index.html`. Es el único fichero HTML del proyecto — toda la aplicación vive aquí.
 
@@ -972,7 +1182,7 @@ Crea `frontend/index.html`. Es el único fichero HTML del proyecto — toda la a
 
 ---
 
-## 13. Frontend — Estilos CSS
+## 14. Frontend — Estilos CSS
 
 Crea `frontend/css/estilos.css`.
 
@@ -991,7 +1201,7 @@ El resto del CSS define el layout (sidebar + contenido principal con CSS Grid o 
 
 ---
 
-## 14. Frontend — config.js
+## 15. Frontend — config.js
 
 Crea `frontend/js/config.js`:
 
@@ -1004,7 +1214,90 @@ Un solo fichero, una sola constante. Toda la configuración de la URL del backen
 
 ---
 
-## 15. Frontend — api.js
+## 16. Frontend — auth.js
+
+Crea `frontend/js/auth.js`. Este fichero gestiona todo lo relacionado con la sesión del usuario: guardar el token, mostrarlo, borrarlo y decidir qué pantalla enseñar al arrancar.
+
+```javascript
+const CLAVE_TOKEN = 'tiendaaero_token';
+
+function obtenerToken() {
+  return localStorage.getItem(CLAVE_TOKEN);
+}
+
+function guardarToken(token) {
+  localStorage.setItem(CLAVE_TOKEN, token);
+}
+
+function cerrarSesion() {
+  localStorage.removeItem(CLAVE_TOKEN);
+  mostrarPantallaLogin();
+}
+
+function mostrarPantallaLogin() {
+  document.getElementById('app').classList.add('oculta');
+  document.getElementById('pantalla-login').classList.remove('oculta');
+  document.getElementById('login-usuario').value = '';
+  document.getElementById('login-contrasena').value = '';
+  document.getElementById('login-error').textContent = '';
+}
+
+function mostrarApp() {
+  document.getElementById('pantalla-login').classList.add('oculta');
+  document.getElementById('app').classList.remove('oculta');
+}
+
+async function enviarLogin(evento) {
+  evento.preventDefault();
+  const usuario    = document.getElementById('login-usuario').value.trim();
+  const contrasena = document.getElementById('login-contrasena').value;
+  const errorDiv   = document.getElementById('login-error');
+  errorDiv.textContent = '';
+
+  // El endpoint de login espera form-data, no JSON (estandar OAuth2)
+  const cuerpo = new URLSearchParams({ username: usuario, password: contrasena });
+
+  try {
+    const respuesta = await fetch(API_URL + '/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: cuerpo.toString()
+    });
+    if (!respuesta.ok) {
+      const datos = await respuesta.json().catch(() => ({}));
+      errorDiv.textContent = datos.detail || 'Usuario o contraseña incorrectos';
+      return;
+    }
+    const datos = await respuesta.json();
+    guardarToken(datos.access_token);
+    mostrarApp();
+    if (!location.hash) location.hash = '#categorias';
+    navegarA(location.hash);
+  } catch (_) {
+    errorDiv.textContent = 'No se puede conectar con el servidor';
+  }
+}
+
+// Al cargar la pagina: si hay token guardado, mostrar la app directamente.
+// Si no, mostrar la pantalla de login.
+window.addEventListener('load', () => {
+  if (obtenerToken()) {
+    mostrarApp();
+  } else {
+    mostrarPantallaLogin();
+  }
+});
+```
+
+**Conceptos clave:**
+
+- **`localStorage`** → almacenamiento del navegador que persiste entre recargas y pestañas. El token se guarda aquí para que el usuario no tenga que iniciar sesión cada vez que recarga la página.
+- **`URLSearchParams`** → construye el cuerpo en formato `application/x-www-form-urlencoded` (`username=admin&password=1234`). Lo necesita el endpoint de login porque sigue el estándar OAuth2 (que usa form-data, no JSON).
+- **Por qué `auth.js` se carga antes que `api.js`** → `api.js` llama a `obtenerToken()` y `cerrarSesion()`, que están definidas aquí. Si `api.js` se cargara primero, daría error.
+
+---
+
+## 17. Frontend — api.js
 
 Crea `frontend/js/api.js`:
 
@@ -1066,7 +1359,7 @@ Sin ellas, cada módulo repetiría el mismo código de `fetch` con cabeceras y m
 
 ---
 
-## 16. Frontend — app.js
+## 18. Frontend — app.js
 
 Crea `frontend/js/app.js`:
 
@@ -1147,7 +1440,7 @@ window.addEventListener('load', () => {
 
 ---
 
-## 17. Frontend — categorias.js
+## 19. Frontend — categorias.js
 
 Crea `frontend/js/categorias.js`. Este módulo sigue el patrón que todos los demás copiarán.
 
@@ -1253,7 +1546,7 @@ async function eliminarCategoria(id) {
 
 ---
 
-## 18. Frontend — productos.js
+## 20. Frontend — productos.js
 
 Crea `frontend/js/productos.js`. Mismo patrón que categorías. La diferencia es que el formulario incluye un `<select>` para elegir la categoría, que se rellena con `_categorias` (variable definida en `categorias.js`).
 
@@ -1279,7 +1572,7 @@ El formulario de producto incluye todos sus campos: nombre, descripción, precio
 
 ---
 
-## 19. Frontend — clientes.js
+## 21. Frontend — clientes.js
 
 Crea `frontend/js/clientes.js`. Mismo patrón. Campos: nombre, email, teléfono, dirección.
 
@@ -1291,7 +1584,7 @@ Mismas cinco funciones: `cargarClientes`, `abrirFormCliente`, `guardarCliente`, 
 
 ---
 
-## 20. Frontend — pedidos.js
+## 22. Frontend — pedidos.js
 
 Crea `frontend/js/pedidos.js`. Es el más complejo por el formulario dinámico de líneas.
 
@@ -1354,7 +1647,7 @@ async function guardarPedido(evento) {
 
 ---
 
-## 21. Script de arranque
+## 23. Script de arranque
 
 Crea `arrancar.bat` en la raíz del proyecto:
 
@@ -1383,7 +1676,7 @@ Este script:
 
 ---
 
-## 22. Verificación final
+## 24. Verificación final
 
 ### Prueba el backend
 
