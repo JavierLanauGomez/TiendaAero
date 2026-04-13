@@ -36,6 +36,9 @@
 29. [Puntos fuertes del proyecto](#29-puntos-fuertes-del-proyecto)
 30. [Puntos de mejora](#30-puntos-de-mejora)
 31. [Preguntas frecuentes en entrevista técnica](#31-preguntas-frecuentes-en-entrevista-técnica)
+32. [Mejora: Dashboard con estadísticas](#32-mejora-dashboard-con-estadísticas)
+33. [Mejora: Editar líneas de un pedido](#33-mejora-editar-líneas-de-un-pedido)
+34. [Mejora: Alertas de stock bajo](#34-mejora-alertas-de-stock-bajo)
 
 ---
 
@@ -2438,6 +2441,147 @@ Usuario abre la app
 ---
 
 *Documento generado a partir del análisis del código fuente del proyecto TiendaAero — Javier Lanau Gómez, FCT 2024/2025.*
+
+---
+
+## 32. Mejora: Dashboard con estadísticas
+
+### ¿Qué es y para qué sirve?
+
+El dashboard es la pantalla principal que ven los usuarios nada más iniciar sesión. Muestra de un vistazo el estado global de la tienda: cuánto se ha vendido, cuántos pedidos hay, qué productos se agotan y cómo han evolucionado las ventas mes a mes.
+
+### Nuevo endpoint: `GET /dashboard`
+
+Se añade `backend/routers/dashboard.py` con un único endpoint que agrega datos de varias tablas en una sola respuesta:
+
+```python
+@enrutador.get("/dashboard")
+def obtener_estadisticas():
+    ...
+    return {
+        "total_pedidos": ...,
+        "total_ventas": ...,
+        "total_clientes": ...,
+        "total_productos": ...,
+        "stock_bajo": [...],        # productos donde stock <= stock_minimo
+        "ventas_por_mes": [...],    # últimos 6 meses agrupados por DATE_FORMAT(fecha, '%Y-%m')
+        "top_productos": [...],     # top 5 por unidades vendidas via JOIN con detalle_pedidos
+    }
+```
+
+**Por qué un endpoint dedicado y no varias llamadas desde el frontend:**
+- Evita 5 peticiones en paralelo al cargar la página → una sola llamada.
+- La lógica de agregación (`SUM`, `GROUP BY`, `JOIN`) pertenece al backend, no al frontend.
+- Es más fácil añadir caché en el futuro si el dashboard carga lento.
+
+**Tipo `Decimal` de MySQL:** Las funciones `SUM()` y `ROUND()` de MySQL devuelven objetos Python de tipo `Decimal`, que no son serializables a JSON por defecto. Se convierten con `float()` explícitamente antes de retornar.
+
+Se registra el router en `main.py` protegido con JWT igual que el resto:
+
+```python
+aplicacion.include_router(dashboard.enrutador, dependencies=[Depends(obtener_usuario_actual)])
+```
+
+### Nuevo fichero: `frontend/js/dashboard.js`
+
+Contiene tres funciones principales:
+
+- **`cargarDashboard()`** — llamada por el sistema de navegación cuando el usuario activa la sección. Llama a `GET /dashboard` y delega el renderizado.
+- **`renderizarDashboard(datos)`** — construye el HTML completo: banner de alerta (si hay stock bajo), cuatro tarjetas KPI, el contenedor de la gráfica y las dos tablas inferiores.
+- **`_dibujarGrafica(ventasPorMes)`** — instancia un `Chart` de tipo `bar` con Chart.js. Antes de crear una instancia nueva, destruye la anterior (`_graficaVentas.destroy()`) para evitar que Canvas quede ocupado al volver a la sección.
+
+**Chart.js** se carga desde CDN en `index.html` antes que los scripts propios:
+```html
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+```
+
+### Cambios en `index.html` y `app.js`
+
+- Se añade `<section id="sec-dashboard">` al contenido principal.
+- Se añade `dashboard` como primera entrada del nav y primera clave de `SECCIONES` en `app.js`.
+- El hash por defecto pasa de `#categorias` a `#dashboard`, tanto en `app.js` como en `auth.js`. Así el usuario aterriza en el dashboard tras el login.
+
+---
+
+## 33. Mejora: Editar líneas de un pedido
+
+### El problema
+
+Al crear un pedido se descuenta stock. Si hay un error en las cantidades no había forma de corregirlo: habría que borrar el pedido y crearlo de nuevo.
+
+### Nuevo endpoint: `PUT /pedidos/{id}/lineas`
+
+Se añade en `backend/routers/pedidos.py`. Recibe `{ "lineas": [...] }` con la nueva lista completa de líneas y realiza la **reconciliación de stock** en una sola transacción:
+
+```
+1. Verificar que el pedido existe.
+2. Leer las líneas actuales de detalle_pedidos.
+3. Devolver el stock de esas líneas (UPDATE productos SET stock = stock + cantidad).
+4. Borrar las líneas actuales (DELETE FROM detalle_pedidos WHERE pedido_id = id).
+5. Para cada nueva línea: validar stock disponible (tras la devolución del paso 3).
+6. Insertar las nuevas líneas y descontar su stock.
+7. Recalcular el total y actualizar pedidos.total.
+8. COMMIT — si en el paso 5 hay stock insuficiente, se hace ROLLBACK.
+```
+
+La clave del diseño es el **orden**: primero se devuelve el stock antiguo y luego se valida el nuevo. Sin este orden, editar una línea para pedir menos unidades del mismo producto fallaría injustamente porque el stock "disponible" no incluiría el que ya estaba reservado por ese pedido.
+
+**Modelo Pydantic:**
+```python
+class LineasPedido(BaseModel):
+    lineas: list[LineaPedido]
+```
+
+Reutiliza `LineaPedido` ya existente (`producto_id` + `cantidad`).
+
+### Cambios en el frontend
+
+**`pedidos.js`**
+
+- Se añade el botón "Editar lineas" junto al botón "Ver" en cada fila de la tabla.
+- **`editarPedido(id)`** — obtiene el pedido con sus líneas (`GET /pedidos/{id}`), abre un modal con el mismo formulario de líneas que "Nuevo pedido" pero pre-rellenado. El cliente aparece en un `<select disabled>` (no se puede cambiar el cliente de un pedido ya creado).
+- **`guardarEdicionPedido(evento, id)`** — recoge las líneas del formulario y llama a `PUT /pedidos/{id}/lineas`. Tras el éxito recarga `_productos` para reflejar los cambios de stock y actualiza el badge del nav.
+
+---
+
+## 34. Mejora: Alertas de stock bajo
+
+### Qué se muestra y dónde
+
+Hay tres puntos de visibilidad para las alertas de stock:
+
+| Lugar | Qué muestra | Cuándo se actualiza |
+|---|---|---|
+| Badge rojo en nav "Productos" | Número de productos con stock bajo o agotado | Al cargar productos o al crear/editar un pedido |
+| Banner rojo en el Dashboard | Aviso con enlace directo a Productos | Al cargar el dashboard |
+| Tarjeta KPI "Stock bajo" | El mismo número, con borde rojo | Al cargar el dashboard |
+| Tabla inferior del dashboard | Lista completa de productos con stock, stock_minimo y marca | Al cargar el dashboard |
+
+### Criterio de "stock bajo"
+
+Un producto se considera en stock bajo cuando `stock <= stock_minimo`. Este campo existe en la tabla `productos` desde el diseño inicial de la base de datos. La consulta SQL es:
+
+```sql
+SELECT id, nombre, stock, stock_minimo, marca
+FROM productos
+WHERE stock <= stock_minimo
+ORDER BY stock ASC
+```
+
+El orden `ASC` pone primero los más críticos (los que tienen menos stock).
+
+### Implementación del badge
+
+La función `actualizarBadgeStock(cantidad)` está en `dashboard.js` (cargado antes que los demás módulos). Muestra u oculta el elemento `#badge-stock` del nav según si hay productos afectados.
+
+Se llama desde tres puntos:
+- `cargarDashboard()` — con el dato que devuelve la API.
+- `cargarProductos()` — filtrando `_productos` en cliente: `_productos.filter(p => p.stock <= p.stock_minimo).length`.
+- `guardarPedido()` y `guardarEdicionPedido()` — tras recargar `_productos` porque crear/editar un pedido modifica el stock.
+
+### CSS: `.badge-nav`
+
+Un `<span>` pequeño de fondo rojo situado dentro del enlace del nav. Usa `border-radius: 99px` para ser circular con cualquier número de dígitos. Tiene clase `.oculta` por defecto y se muestra solo cuando `cantidad > 0`.
 
 ---
 

@@ -47,6 +47,8 @@ async function cargarPedidos() {
               <td class="acciones">
                 <button class="btn btn-secundario btn-sm"
                         onclick="verDetallePedido(${pedido.id})">Ver</button>
+                <button class="btn btn-secundario btn-sm"
+                        onclick="editarPedido(${pedido.id})">Editar lineas</button>
                 <select class="select-estado"
                         onchange="cambiarEstado(${pedido.id}, this.value)">
                   <option value="pendiente"  ${pedido.estado === 'pendiente'  ? 'selected' : ''}>Pendiente</option>
@@ -264,6 +266,103 @@ async function guardarPedido(evento) {
     cerrarModal();
     // Recargar productos para ver el stock actualizado
     _productos = await obtenerDatos('/productos');
+    actualizarBadgeStock(_productos.filter(p => p.stock <= p.stock_minimo).length);
+    cargarPedidos();
+  } catch (error) {
+    mostrarToast(error.message, 'error');
+  }
+}
+
+// ----------------------------------------------------------
+// EDITAR LINEAS DE UN PEDIDO EXISTENTE
+// ----------------------------------------------------------
+async function editarPedido(id) {
+  try {
+    const pedido = await obtenerDatos(`/pedidos/${id}`);
+
+    if (_clientes.length === 0) {
+      _clientes = await obtenerDatos('/clientes');
+    }
+    if (_productos.length === 0) {
+      _productos = await obtenerDatos('/productos');
+    }
+
+    _contadorLineas = 0;
+
+    const opcionesClientes = _clientes.map(c =>
+      `<option value="${c.id}" ${c.id === pedido.cliente_id ? 'selected' : ''}>${c.nombre}</option>`
+    ).join('');
+
+    abrirModal(`Editar pedido #${id}`, `
+      <form onsubmit="guardarEdicionPedido(event, ${id})">
+        <div class="campo">
+          <label>Cliente</label>
+          <select id="ped-cliente" disabled>
+            ${opcionesClientes}
+          </select>
+        </div>
+
+        <div class="campo">
+          <label>Lineas del pedido</label>
+          <div class="lineas-cabecera">
+            <span>Producto</span><span>Cantidad</span><span></span>
+          </div>
+          <div id="contenedor-lineas"></div>
+          <button type="button" class="btn btn-secundario btn-sm"
+                  onclick="agregarLineaPedido()" style="margin-top:8px">
+            + Agregar producto
+          </button>
+        </div>
+
+        <div class="total-pedido">
+          Total estimado: <span id="total-estimado">0.00</span> €
+        </div>
+
+        <div class="form-botones">
+          <button type="button" class="btn btn-secundario" onclick="cerrarModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primario">Guardar cambios</button>
+        </div>
+      </form>
+    `);
+
+    // Pre-rellenar con las lineas actuales del pedido
+    for (const linea of pedido.lineas) {
+      agregarLineaPedido();
+      const num = _contadorLineas;
+      document.getElementById(`linea-producto-${num}`).value = linea.producto_id;
+      document.getElementById(`linea-cantidad-${num}`).value = linea.cantidad;
+    }
+    recalcularTotal();
+
+  } catch (error) {
+    mostrarToast(error.message, 'error');
+  }
+}
+
+async function guardarEdicionPedido(evento, id) {
+  evento.preventDefault();
+
+  const lineas = [];
+  document.querySelectorAll('.linea-pedido').forEach(linea => {
+    const numero     = linea.id.replace('linea-', '');
+    const idProducto = parseInt(document.getElementById(`linea-producto-${numero}`)?.value);
+    const cantidad   = parseInt(document.getElementById(`linea-cantidad-${numero}`)?.value);
+    if (idProducto && cantidad > 0) {
+      lineas.push({ producto_id: idProducto, cantidad });
+    }
+  });
+
+  if (lineas.length === 0) {
+    mostrarToast('Agrega al menos un producto', 'error');
+    return;
+  }
+
+  try {
+    const resultado = await modificarDatos(`/pedidos/${id}/lineas`, { lineas });
+    mostrarToast(`Pedido actualizado — Total: ${Number(resultado.total).toFixed(2)} €`);
+    cerrarModal();
+    _productos = await obtenerDatos('/productos');
+    actualizarBadgeStock(_productos.filter(p => p.stock <= p.stock_minimo).length);
     cargarPedidos();
   } catch (error) {
     mostrarToast(error.message, 'error');

@@ -6,6 +6,7 @@
 // y su valor dice que seccion mostrar y que funcion llamar para
 // cargar los datos.
 const SECCIONES = {
+  dashboard:  { idSeccion: 'sec-dashboard',  cargarDatos: () => cargarDashboard()  },
   categorias: { idSeccion: 'sec-categorias', cargarDatos: () => cargarCategorias() },
   productos:  { idSeccion: 'sec-productos',  cargarDatos: () => cargarProductos()  },
   clientes:   { idSeccion: 'sec-clientes',   cargarDatos: () => cargarClientes()   },
@@ -16,7 +17,7 @@ const SECCIONES = {
 // NAVEGACION
 // ----------------------------------------------------------
 function navegarA(hash) {
-  const clave = (hash || '').replace('#', '') || 'categorias';
+  const clave = (hash || '').replace('#', '') || 'dashboard';
 
   // Ocultar todas las secciones
   document.querySelectorAll('.seccion').forEach(seccion => seccion.classList.add('oculta'));

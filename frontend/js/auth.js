@@ -89,7 +89,7 @@ async function enviarLogin(evento) {
     mostrarApp();
 
     // Arrancar la navegacion ahora que tenemos sesion
-    if (!location.hash) location.hash = '#categorias';
+    if (!location.hash) location.hash = '#dashboard';
     navegarA(location.hash);
 
   } catch (_) {

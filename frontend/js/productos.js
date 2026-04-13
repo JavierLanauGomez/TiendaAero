@@ -55,6 +55,7 @@ async function cargarProductos() {
         </tbody>
       </table>
     `;
+    actualizarBadgeStock(_productos.filter(p => p.stock <= p.stock_minimo).length);
   } catch (error) {
     mostrarMensaje('tabla-productos', 'Error: ' + error.message, true);
   }

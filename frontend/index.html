@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TiendaAero</title>
   <link rel="stylesheet" href="css/estilos.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -71,8 +72,14 @@
     <nav class="sidebar">
       <div class="logo">✈ TiendaAero</div>
       <ul class="nav-lista">
+        <li><a href="#dashboard"  class="nav-enlace" data-seccion="dashboard">Dashboard</a></li>
         <li><a href="#categorias" class="nav-enlace" data-seccion="categorias">Categorias</a></li>
-        <li><a href="#productos"  class="nav-enlace" data-seccion="productos">Productos</a></li>
+        <li>
+          <a href="#productos" class="nav-enlace" data-seccion="productos">
+            Productos
+            <span id="badge-stock" class="badge-nav oculta">0</span>
+          </a>
+        </li>
         <li><a href="#clientes"   class="nav-enlace" data-seccion="clientes">Clientes</a></li>
         <li><a href="#pedidos"    class="nav-enlace" data-seccion="pedidos">Pedidos</a></li>
       </ul>
@@ -81,6 +88,14 @@
 
     <!-- CONTENIDO PRINCIPAL -->
     <main class="contenido">
+
+      <!-- SECCION DASHBOARD -->
+      <section id="sec-dashboard" class="seccion oculta">
+        <div class="sec-cabecera">
+          <h1>Dashboard</h1>
+        </div>
+        <div id="dashboard-contenido"></div>
+      </section>
 
       <!-- SECCION CATEGORIAS -->
       <section id="sec-categorias" class="seccion oculta">
@@ -141,6 +156,7 @@
   <script src="js/auth.js"></script>
   <script src="js/api.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/dashboard.js"></script>
   <script src="js/categorias.js"></script>
   <script src="js/productos.js"></script>
   <script src="js/clientes.js"></script>
