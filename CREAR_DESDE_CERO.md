@@ -2227,8 +2227,8 @@ En varios módulos se inserta directamente el nombre del cliente/producto en el 
 ### Sin manejo de errores de conexión personalizados
 Si la base de datos no está disponible, el usuario ve un error genérico HTTP 500. Sería mejor capturar `mysql.connector.Error` y devolver HTTP 503 (Service Unavailable) con un mensaje claro.
 
-### Formulario de actualización abre siempre vacío
-Al editar un registro, el formulario debería prerrellenar los valores actuales. Actualmente hay que volver a escribir todos los campos.
+### ~~Formulario de actualización abre siempre vacío~~ ✓ Implementado
+Los formularios ya prerrellenan los valores desde la caché local (`_categorias`, `_productos`, etc.). Además se añadió `escapeHtml()` para proteger contra XSS al inyectar datos del servidor en atributos HTML. Ver sección 35.
 
 ### Race condition en el stock
 Si dos usuarios compraran el último producto al mismo tiempo, ambas peticiones podrían pasar la validación de stock y decrementarlo a -1. La solución correcta es `SELECT ... FOR UPDATE` para bloquear la fila durante la transacción.
@@ -2784,3 +2784,303 @@ R: Por seguridad. GitHub Actions por defecto tiene permisos mínimos. Si no decl
 ---
 
 *Guía elaborada sobre el proyecto TiendaAero — Javier Lanau Gómez, FCT 2024/2025.*
+
+---
+
+## 35. Mejora: Formularios prerrellenados y protección XSS con `escapeHtml`
+
+### El problema original
+
+El punto de mejora 30 decía: *"Al editar un registro, el formulario debería prerrellenar los valores actuales."*
+
+La solución ya estaba parcialmente en el código: cada módulo guarda los datos del servidor en una variable global (`_categorias`, `_productos`, etc.). Al abrir el formulario de edición se busca el objeto por `id` y se inyecta en los atributos `value=""` del HTML:
+
+```js
+const categoria = _categorias.find(c => c.id === id);  // busca en cache local
+...
+value="${categoria ? categoria.nombre : ''}"            // inyecta el valor
+```
+
+Esto funciona. Pero hay un problema de seguridad que se solucionó en esta mejora.
+
+### El problema de seguridad: XSS
+
+XSS (*Cross-Site Scripting*) ocurre cuando datos del servidor se insertan directamente en HTML sin neutralizar los caracteres especiales. Por ejemplo, si un producto tiene el nombre:
+
+```
+DJI Mini " onmouseover="alert(1)
+```
+
+El HTML generado quedaría:
+
+```html
+<input value="DJI Mini " onmouseover="alert(1)">
+```
+
+El atributo `value` se cierra prematuramente con `"` y el atacante añade un evento JavaScript. En la tabla sería aún peor: si el nombre fuera `<script>...</script>`, se ejecutaría directamente.
+
+### La solución: `escapeHtml()`
+
+Se añade una función de utilidad en `app.js` que convierte los cinco caracteres conflictivos en sus entidades HTML seguras:
+
+```js
+function escapeHtml(texto) {
+  if (texto === null || texto === undefined) return '';
+  return String(texto)
+    .replace(/&/g, '&amp;')   // & → &amp;  (siempre el primero)
+    .replace(/"/g, '&quot;')  // " → &quot; (cierra atributos)
+    .replace(/'/g, '&#39;')   // ' → &#39;  (cierra atributos con comilla simple)
+    .replace(/</g, '&lt;')    // < → &lt;   (abre etiqueta)
+    .replace(/>/g, '&gt;');   // > → &gt;   (cierra etiqueta)
+}
+```
+
+**¿Por qué `&` es el primero?** Porque si lo hicieras después de los demás, convertirías las entidades que acabas de crear (`&amp;` → `&amp;amp;`). El orden importa.
+
+Se usa en todos los sitios donde un dato del servidor aparece dentro de un atributo HTML o en el contenido de una celda:
+
+```js
+// En la tabla (textContent de celda)
+<td>${escapeHtml(categoria.nombre)}</td>
+
+// En el formulario (atributo value)
+<input value="${escapeHtml(categoria.nombre)}">
+```
+
+### ¿Por qué no usar `textContent` directamente?
+
+`textContent` es seguro para contenido de nodo, pero no aplica dentro de strings de `innerHTML`. Como estos módulos construyen tablas completas como string HTML (por simplicidad y rendimiento), la única forma segura es `escapeHtml` antes de interpolar.
+
+---
+
+## 36. Mejora: Buscador en tiempo real en las tablas
+
+### ¿Qué hace?
+
+Cada sección (Categorías, Productos, Clientes, Pedidos) tiene ahora un campo de búsqueda en la cabecera. Cuando el usuario escribe, las filas que no coincidan desaparecen instantáneamente, sin ninguna petición al servidor.
+
+### Implementación
+
+Se añade la función `inicializarBuscador(inputId, contenedorTablaId)` en `app.js`:
+
+```js
+function inicializarBuscador(inputId, contenedorTablaId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+
+  input.addEventListener('input', () => {
+    const termino = input.value.toLowerCase().trim();
+    const filas = document.querySelectorAll(`#${contenedorTablaId} tbody tr`);
+
+    filas.forEach(fila => {
+      const visible = termino === '' || fila.textContent.toLowerCase().includes(termino);
+      fila.style.display = visible ? '' : 'none';
+    });
+  });
+}
+```
+
+**Cómo funciona paso a paso:**
+
+1. `document.getElementById(inputId)` — busca el `<input>` de búsqueda por su id.
+2. `addEventListener('input', ...)` — se activa en cada pulsación de tecla (no solo al perder el foco como `change`).
+3. `input.value.toLowerCase().trim()` — normaliza el texto: minúsculas y sin espacios al inicio/final.
+4. `querySelectorAll('#contenedor tbody tr')` — selecciona todas las filas del cuerpo de la tabla.
+5. `fila.textContent` — devuelve todo el texto visible de la fila (nombre, email, estado…) concatenado, sin etiquetas HTML. Es seguro de leer.
+6. `fila.style.display = 'none'` / `''` — ocultar/mostrar es más rápido que añadir/quitar clases porque evita el recalculo de estilos en cascada.
+
+**¿Por qué no filtrar el array y re-renderizar?** Porque implicaría reescribir la tabla entera en el DOM en cada pulsación (lento y borra los event listeners). Ocultar/mostrar filas existentes es mucho más eficiente.
+
+La función se llama al final de cada `cargar*()`, justo después de inyectar el HTML de la tabla:
+
+```js
+async function cargarCategorias() {
+  // ... fetch y render de la tabla ...
+  inicializarBuscador('buscar-categorias', 'tabla-categorias');
+}
+```
+
+**¿Por qué se llama dentro de `cargar*()` y no al arrancar la app?** Porque el `<input>` del buscador existe desde el inicio (está en el HTML), pero la `<table>` se genera dinámicamente. Si llamaras a `inicializarBuscador` antes de que existiera la tabla, el `querySelectorAll` no encontraría ninguna fila. Al llamarla después de renderizar la tabla, siempre hay filas que filtrar.
+
+### HTML del buscador
+
+Se añade en `index.html` dentro de la `.sec-cabecera` de cada sección. Para que el input y el botón queden alineados se usa un contenedor `.cabecera-acciones`:
+
+```html
+<div class="sec-cabecera">
+  <h1>Categorias</h1>
+  <div class="cabecera-acciones">
+    <input class="buscador" id="buscar-categorias" type="search" placeholder="Buscar categoria...">
+    <button class="btn btn-primario" onclick="abrirFormCategoria()">+ Nueva categoria</button>
+  </div>
+</div>
+```
+
+**¿Por qué `type="search"` y no `type="text"`?** El tipo `search` añade automáticamente una ✕ para limpiar el campo en la mayoría de navegadores, sin JavaScript adicional.
+
+### CSS
+
+```css
+.cabecera-acciones {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.buscador {
+  padding: 7px 12px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  font-size: 13px;
+  width: 220px;
+}
+
+.buscador:focus {
+  border-color: var(--color-primario);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+```
+
+---
+
+## 37. Mejora: Vista detalle de un pedido
+
+### ¿Qué hace?
+
+Al hacer clic en el botón **"Ver"** de la tabla de pedidos, se abre un modal con toda la información del pedido: cliente, fecha, estado y la tabla de líneas (producto, cantidad, precio unitario, subtotal).
+
+### Por qué se necesita un endpoint específico
+
+`GET /pedidos` devuelve solo la cabecera del pedido (id, cliente_id, fecha, total, estado). Las líneas están en la tabla `detalle_pedidos` y requieren una segunda consulta. Por eso existe `GET /pedidos/{id}`, que hace JOIN implícito:
+
+```python
+@enrutador.get("/pedidos/{id}")
+def obtener_pedido(id: int):
+    cursor.execute("SELECT * FROM pedidos WHERE id = %s", (id,))
+    pedido = cursor.fetchone()
+    cursor.execute("SELECT * FROM detalle_pedidos WHERE pedido_id = %s", (id,))
+    pedido["lineas"] = cursor.fetchall()   # añade las lineas al mismo objeto
+    return pedido
+```
+
+La respuesta es un objeto que incluye las líneas como array anidado:
+
+```json
+{
+  "id": 5,
+  "cliente_id": 2,
+  "fecha": "2025-04-10",
+  "total": 1299.98,
+  "estado": "enviado",
+  "lineas": [
+    { "producto_id": 3, "cantidad": 1, "precio_unitario": 999.99 },
+    { "producto_id": 7, "cantidad": 2, "precio_unitario": 149.99 }
+  ]
+}
+```
+
+### Frontend: `verDetallePedido(id)`
+
+```js
+async function verDetallePedido(id) {
+  const pedido = await obtenerDatos(`/pedidos/${id}`);
+
+  abrirModal(`Pedido #${id}`, `
+    <p><strong>Cliente:</strong> ${buscarNombreCliente(pedido.cliente_id)}</p>
+    <p><strong>Fecha:</strong> ${pedido.fecha}</p>
+    <p><strong>Estado:</strong> <span class="badge badge-${pedido.estado}">${pedido.estado}</span></p>
+    <table class="tabla">
+      <thead><tr><th>Producto</th><th>Cantidad</th><th>Precio unit.</th><th>Subtotal</th></tr></thead>
+      <tbody>
+        ${pedido.lineas.map(linea => `
+          <tr>
+            <td>${buscarNombreProducto(linea.producto_id)}</td>
+            <td>${linea.cantidad}</td>
+            <td>${Number(linea.precio_unitario).toFixed(2)} €</td>
+            <td>${(linea.cantidad * linea.precio_unitario).toFixed(2)} €</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <div class="total-pedido">Total: ${Number(pedido.total).toFixed(2)} €</div>
+  `);
+}
+```
+
+**¿Por qué `buscarNombreProducto()` en lugar de pedir el nombre al backend?** Porque `_productos` ya está en caché si el usuario ha visitado la sección Productos. Si no, devuelve `"Producto #3"` como fallback. Evita una petición extra al servidor por cada línea del pedido.
+
+---
+
+## 38. Mejora: Historial de pedidos de un cliente
+
+### ¿Qué hace?
+
+Desde la sección Clientes, cada fila tiene un botón **"Pedidos"** que abre un modal con todos los pedidos de ese cliente ordenados del más reciente al más antiguo.
+
+### Nuevo endpoint: `GET /clientes/{id}/pedidos`
+
+Se añade en `backend/routers/clientes.py`:
+
+```python
+@enrutador.get("/clientes/{id}/pedidos")
+def pedidos_de_cliente(id: int):
+    conexion = obtener_conexion()
+    cursor = conexion.cursor(dictionary=True)
+
+    # Verificar que el cliente existe antes de buscar sus pedidos
+    cursor.execute("SELECT id FROM clientes WHERE id = %s", (id,))
+    if cursor.fetchone() is None:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    cursor.execute(
+        "SELECT * FROM pedidos WHERE cliente_id = %s ORDER BY fecha DESC, id DESC",
+        (id,)
+    )
+    pedidos = cursor.fetchall()
+    cursor.close()
+    conexion.close()
+    return pedidos
+```
+
+**¿Por qué verificar que el cliente existe?** Si el `id` no existe en `clientes`, la consulta de pedidos devolvería un array vacío — técnicamente correcto pero semánticamente incorrecto: no es que "no tenga pedidos", es que el cliente no existe. Devolver 404 es la respuesta HTTP correcta para un recurso inexistente.
+
+**¿Por qué `ORDER BY fecha DESC, id DESC`?** `fecha` tiene precisión de día. Si hay dos pedidos el mismo día, `id DESC` garantiza que el más reciente (mayor id, creado después) aparezca primero.
+
+**¿Por qué no usar un parámetro query en `GET /pedidos?cliente=5`?** Las dos opciones son válidas. La ruta `/clientes/{id}/pedidos` es más RESTful porque expresa la relación jerárquica: *los pedidos son un sub-recurso del cliente*. También facilita añadir en el futuro `/clientes/{id}/pedidos/{pedido_id}` si se necesita.
+
+### Frontend: `verHistorialCliente(id)`
+
+```js
+async function verHistorialCliente(id) {
+  const cliente = _clientes.find(c => c.id === id);
+  const pedidos = await obtenerDatos(`/clientes/${id}/pedidos`);
+
+  const filas = pedidos.length === 0
+    ? '<tr><td colspan="4">Este cliente no tiene pedidos todavia.</td></tr>'
+    : pedidos.map(p => `
+        <tr>
+          <td>#${p.id}</td>
+          <td>${p.fecha}</td>
+          <td>${Number(p.total).toFixed(2)} €</td>
+          <td><span class="badge badge-${p.estado}">${p.estado}</span></td>
+        </tr>
+      `).join('');
+
+  abrirModal(`Pedidos de ${escapeHtml(cliente.nombre)}`, `
+    <table class="tabla">
+      <thead><tr><th>Pedido</th><th>Fecha</th><th>Total</th><th>Estado</th></tr></thead>
+      <tbody>${filas}</tbody>
+    </table>
+  `);
+}
+```
+
+**¿Por qué `escapeHtml(cliente.nombre)` en el título del modal?** El título se inyecta via `innerHTML` en `abrirModal()`. Si el nombre del cliente contuviera `<b>` o comillas, podría alterar el HTML del modal.
+
+### Actualización de la tabla de la API REST
+
+El endpoint nuevo se añade a la referencia de la sección 27:
+
+| Método | Ruta | Qué hace |
+|--------|------|----------|
+| GET | `/clientes/{id}/pedidos` | Devuelve todos los pedidos de ese cliente ordenados por fecha descendente |

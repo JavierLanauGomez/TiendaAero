@@ -77,6 +77,30 @@ def actualizar_cliente(id: int, datos: ClienteActualizar):
     return {"mensaje": "Cliente actualizado"}
 
 
+@enrutador.get("/clientes/{id}/pedidos")
+def pedidos_de_cliente(id: int):
+    """
+    Devuelve todos los pedidos de un cliente concreto ordenados
+    del mas reciente al mas antiguo.
+    Primero verifica que el cliente existe (404 si no).
+    """
+    conexion = obtener_conexion()
+    cursor = conexion.cursor(dictionary=True)
+    cursor.execute("SELECT id FROM clientes WHERE id = %s", (id,))
+    if cursor.fetchone() is None:
+        cursor.close()
+        conexion.close()
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    cursor.execute(
+        "SELECT * FROM pedidos WHERE cliente_id = %s ORDER BY fecha DESC, id DESC",
+        (id,)
+    )
+    pedidos = cursor.fetchall()
+    cursor.close()
+    conexion.close()
+    return pedidos
+
+
 @enrutador.delete("/clientes/{id}")
 def eliminar_cliente(id: int):
     conexion = obtener_conexion()

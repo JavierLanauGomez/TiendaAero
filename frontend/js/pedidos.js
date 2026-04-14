@@ -61,6 +61,7 @@ async function cargarPedidos() {
         </tbody>
       </table>
     `;
+    inicializarBuscador('buscar-pedidos', 'tabla-pedidos');
   } catch (error) {
     mostrarMensaje('tabla-pedidos', 'Error: ' + error.message, true);
   }

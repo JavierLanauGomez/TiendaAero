@@ -19,7 +19,9 @@ async function cargarCategorias() {
       return;
     }
 
-    // Construimos la tabla como texto HTML y la metemos en el div
+    // Construimos la tabla como texto HTML y la metemos en el div.
+    // escapeHtml() protege contra XSS: si un nombre contuviera
+    // caracteres HTML (<, >, "), quedarian neutralizados.
     document.getElementById('tabla-categorias').innerHTML = `
       <table class="tabla">
         <thead>
@@ -34,8 +36,8 @@ async function cargarCategorias() {
           ${_categorias.map(categoria => `
             <tr>
               <td>${categoria.id}</td>
-              <td>${categoria.nombre}</td>
-              <td>${categoria.descripcion || '—'}</td>
+              <td>${escapeHtml(categoria.nombre)}</td>
+              <td>${escapeHtml(categoria.descripcion) || '—'}</td>
               <td class="acciones">
                 <button class="btn btn-secundario btn-sm"
                         onclick="abrirFormCategoria(${categoria.id})">Editar</button>
@@ -47,6 +49,8 @@ async function cargarCategorias() {
         </tbody>
       </table>
     `;
+    // Activa el buscador una vez que la tabla esta en el DOM
+    inicializarBuscador('buscar-categorias', 'tabla-categorias');
   } catch (error) {
     mostrarMensaje('tabla-categorias', 'Error: ' + error.message, true);
   }
@@ -60,17 +64,19 @@ function abrirFormCategoria(id) {
   const categoria = id ? _categorias.find(c => c.id === id) : null;
   const titulo = categoria ? 'Editar categoria' : 'Nueva categoria';
 
+  // escapeHtml en los value evita que comillas o < en el nombre
+  // rompan el atributo HTML o inyecten codigo
   abrirModal(titulo, `
     <form onsubmit="guardarCategoria(event, ${id || ''})">
       <div class="campo">
         <label>Nombre *</label>
         <input type="text" id="cat-nombre" required
-               value="${categoria ? categoria.nombre : ''}">
+               value="${escapeHtml(categoria ? categoria.nombre : '')}">
       </div>
       <div class="campo">
         <label>Descripcion</label>
         <input type="text" id="cat-descripcion"
-               value="${categoria && categoria.descripcion ? categoria.descripcion : ''}">
+               value="${escapeHtml(categoria && categoria.descripcion ? categoria.descripcion : '')}">
       </div>
       <div class="form-botones">
         <button type="button" class="btn btn-secundario" onclick="cerrarModal()">Cancelar</button>

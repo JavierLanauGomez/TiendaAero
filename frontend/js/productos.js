@@ -56,6 +56,7 @@ async function cargarProductos() {
       </table>
     `;
     actualizarBadgeStock(_productos.filter(p => p.stock <= p.stock_minimo).length);
+    inicializarBuscador('buscar-productos', 'tabla-productos');
   } catch (error) {
     mostrarMensaje('tabla-productos', 'Error: ' + error.message, true);
   }
@@ -87,12 +88,12 @@ async function abrirFormProducto(id) {
         <div class="campo">
           <label>Nombre *</label>
           <input type="text" id="prod-nombre" required
-                 value="${producto ? producto.nombre : ''}">
+                 value="${escapeHtml(producto ? producto.nombre : '')}">
         </div>
         <div class="campo">
           <label>Marca</label>
           <input type="text" id="prod-marca"
-                 value="${producto && producto.marca ? producto.marca : ''}">
+                 value="${escapeHtml(producto && producto.marca ? producto.marca : '')}">
         </div>
         <div class="campo">
           <label>Precio (€) *</label>
@@ -120,12 +121,12 @@ async function abrirFormProducto(id) {
       <div class="campo">
         <label>Descripcion</label>
         <input type="text" id="prod-descripcion"
-               value="${producto && producto.descripcion ? producto.descripcion : ''}">
+               value="${escapeHtml(producto && producto.descripcion ? producto.descripcion : '')}">
       </div>
       <div class="campo">
         <label>URL de imagen</label>
         <input type="text" id="prod-imagen"
-               value="${producto && producto.imagen_url ? producto.imagen_url : ''}">
+               value="${escapeHtml(producto && producto.imagen_url ? producto.imagen_url : '')}">
       </div>
       <div class="form-botones">
         <button type="button" class="btn btn-secundario" onclick="cerrarModal()">Cancelar</button>

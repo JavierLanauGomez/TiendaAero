@@ -872,6 +872,49 @@ body {
 }
 
 /* ============================================================
+   CABECERA CON BUSCADOR
+   Agrupa el input de busqueda y el boton de accion
+   en la parte derecha de la cabecera de seccion.
+   ============================================================ */
+.cabecera-acciones {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Input de busqueda en tiempo real */
+.buscador {
+  padding: 7px 12px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  font-size: 13px;
+  color: var(--texto);
+  background: var(--blanco);
+  width: 220px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.buscador:focus {
+  outline: none;
+  border-color: var(--color-primario);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* Boton informativo (azul claro) para acciones secundarias */
+.btn-info {
+  background: #0ea5e9;
+  color: #ffffff;
+}
+
+.btn-info:hover {
+  background: #0284c7;
+}
+
+/* Texto centrado y suave para tablas vacias */
+.texto-centrado { text-align: center; }
+.texto-suave    { color: var(--texto-suave); }
+
+/* ============================================================
    SECCION INICIO
    ============================================================ */
 

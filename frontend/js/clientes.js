@@ -1,5 +1,5 @@
 // ============================================================
-// clientes.js — CRUD de clientes
+// clientes.js — CRUD de clientes + historial de pedidos
 // ============================================================
 
 var _clientes = [];
@@ -33,11 +33,13 @@ async function cargarClientes() {
           ${_clientes.map(cliente => `
             <tr>
               <td>${cliente.id}</td>
-              <td>${cliente.nombre}</td>
-              <td>${cliente.email}</td>
-              <td>${cliente.telefono || '—'}</td>
-              <td>${cliente.direccion || '—'}</td>
+              <td>${escapeHtml(cliente.nombre)}</td>
+              <td>${escapeHtml(cliente.email)}</td>
+              <td>${escapeHtml(cliente.telefono) || '—'}</td>
+              <td>${escapeHtml(cliente.direccion) || '—'}</td>
               <td class="acciones">
+                <button class="btn btn-info btn-sm"
+                        onclick="verHistorialCliente(${cliente.id})">Pedidos</button>
                 <button class="btn btn-secundario btn-sm"
                         onclick="abrirFormCliente(${cliente.id})">Editar</button>
                 <button class="btn btn-peligro btn-sm"
@@ -48,8 +50,53 @@ async function cargarClientes() {
         </tbody>
       </table>
     `;
+    inicializarBuscador('buscar-clientes', 'tabla-clientes');
   } catch (error) {
     mostrarMensaje('tabla-clientes', 'Error: ' + error.message, true);
+  }
+}
+
+// ----------------------------------------------------------
+// HISTORIAL DE PEDIDOS DE UN CLIENTE
+// Llama a GET /clientes/{id}/pedidos (devuelve solo los pedidos
+// de ese cliente ordenados del mas reciente al mas antiguo).
+// No reutiliza _pedidos porque el usuario puede no haber
+// visitado aun la seccion Pedidos.
+// ----------------------------------------------------------
+async function verHistorialCliente(id) {
+  const cliente = _clientes.find(c => c.id === id);
+  try {
+    const pedidos = await obtenerDatos(`/clientes/${id}/pedidos`);
+
+    const filas = pedidos.length === 0
+      ? '<tr><td colspan="4" class="texto-centrado texto-suave">Este cliente no tiene pedidos todavia.</td></tr>'
+      : pedidos.map(p => `
+          <tr>
+            <td>#${p.id}</td>
+            <td>${p.fecha}</td>
+            <td>${Number(p.total).toFixed(2)} €</td>
+            <td><span class="badge badge-${p.estado}">${p.estado}</span></td>
+          </tr>
+        `).join('');
+
+    abrirModal(`Pedidos de ${escapeHtml(cliente ? cliente.nombre : 'cliente')}`, `
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>Pedido</th>
+            <th>Fecha</th>
+            <th>Total</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>${filas}</tbody>
+      </table>
+      <div class="form-botones" style="margin-top:16px">
+        <button class="btn btn-secundario" onclick="cerrarModal()">Cerrar</button>
+      </div>
+    `);
+  } catch (error) {
+    mostrarToast(error.message, 'error');
   }
 }
 
@@ -65,22 +112,22 @@ function abrirFormCliente(id) {
       <div class="campo">
         <label>Nombre *</label>
         <input type="text" id="cli-nombre" required
-               value="${cliente ? cliente.nombre : ''}">
+               value="${escapeHtml(cliente ? cliente.nombre : '')}">
       </div>
       <div class="campo">
         <label>Email *</label>
         <input type="email" id="cli-email" required
-               value="${cliente ? cliente.email : ''}">
+               value="${escapeHtml(cliente ? cliente.email : '')}">
       </div>
       <div class="campo">
         <label>Telefono</label>
         <input type="text" id="cli-telefono"
-               value="${cliente && cliente.telefono ? cliente.telefono : ''}">
+               value="${escapeHtml(cliente && cliente.telefono ? cliente.telefono : '')}">
       </div>
       <div class="campo">
         <label>Direccion</label>
         <input type="text" id="cli-direccion"
-               value="${cliente && cliente.direccion ? cliente.direccion : ''}">
+               value="${escapeHtml(cliente && cliente.direccion ? cliente.direccion : '')}">
       </div>
       <div class="form-botones">
         <button type="button" class="btn btn-secundario" onclick="cerrarModal()">Cancelar</button>

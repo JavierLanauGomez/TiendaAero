@@ -79,6 +79,43 @@ function mostrarToast(mensaje, tipo = 'exito') {
 }
 
 // ----------------------------------------------------------
+// SEGURIDAD: escapeHtml
+// Convierte caracteres especiales HTML en entidades seguras.
+// Se usa siempre que se inserta un dato del servidor dentro de
+// un atributo HTML (value="...") o en textContent de la tabla.
+// Sin esto, un nombre como  "><script>alert(1)</script>  podria
+// ejecutar codigo en el navegador del usuario (XSS).
+// ----------------------------------------------------------
+function escapeHtml(texto) {
+  if (texto === null || texto === undefined) return '';
+  return String(texto)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+// ----------------------------------------------------------
+// BUSCADOR EN TIEMPO REAL
+// Conecta un <input> con una tabla: cuando el usuario escribe,
+// oculta las filas cuyo textContent no incluye el termino.
+// No hace ninguna peticion al servidor — filtra el DOM local.
+// ----------------------------------------------------------
+function inicializarBuscador(inputId, contenedorTablaId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  input.addEventListener('input', () => {
+    const termino = input.value.toLowerCase().trim();
+    const filas = document.querySelectorAll(`#${contenedorTablaId} tbody tr`);
+    filas.forEach(fila => {
+      const visible = termino === '' || fila.textContent.toLowerCase().includes(termino);
+      fila.style.display = visible ? '' : 'none';
+    });
+  });
+}
+
+// ----------------------------------------------------------
 // MENSAJE DE ESTADO EN TABLA (cargando, vacio, error)
 // ----------------------------------------------------------
 function mostrarMensaje(idContenedor, texto, esError = false) {
