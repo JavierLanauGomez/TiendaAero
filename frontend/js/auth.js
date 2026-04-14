@@ -89,8 +89,8 @@ async function enviarLogin(evento) {
     mostrarApp();
 
     // Arrancar la navegacion ahora que tenemos sesion
-    if (!location.hash) location.hash = '#dashboard';
-    navegarA(location.hash);
+    location.hash = '#inicio';
+    navegarA('#inicio');
 
   } catch (_) {
     errorDiv.textContent = 'No se puede conectar con el servidor';
@@ -145,6 +145,7 @@ async function enviarRegistro(evento) {
 window.addEventListener('load', () => {
   if (obtenerToken()) {
     mostrarApp();
+    navegarA(location.hash || '#inicio');
   } else {
     mostrarPantallaLogin();
   }

@@ -36,7 +36,7 @@
 29. [Puntos fuertes del proyecto](#29-puntos-fuertes-del-proyecto)
 30. [Puntos de mejora](#30-puntos-de-mejora)
 31. [Preguntas frecuentes en entrevista técnica](#31-preguntas-frecuentes-en-entrevista-técnica)
-32. [Mejora: Dashboard con estadísticas](#32-mejora-dashboard-con-estadísticas)
+32. [Mejora: Dashboard — panel de control visual](#32-mejora-dashboard--panel-de-control-visual)
 33. [Mejora: Editar líneas de un pedido](#33-mejora-editar-líneas-de-un-pedido)
 34. [Mejora: Alertas de stock bajo](#34-mejora-alertas-de-stock-bajo)
 
@@ -2444,62 +2444,242 @@ Usuario abre la app
 
 ---
 
-## 32. Mejora: Dashboard con estadísticas
+## 32. Mejora: Dashboard — panel de control visual
 
 ### ¿Qué es y para qué sirve?
 
-El dashboard es la pantalla principal que ven los usuarios nada más iniciar sesión. Muestra de un vistazo el estado global de la tienda: cuánto se ha vendido, cuántos pedidos hay, qué productos se agotan y cómo han evolucionado las ventas mes a mes.
+El dashboard es la pantalla principal que ven los usuarios nada más iniciar sesión. Su objetivo es que el gestor de la tienda pueda leer el estado del negocio **de un solo vistazo**, sin tener que navegar a otras secciones.
 
-### Nuevo endpoint: `GET /dashboard`
+La versión inicial mostraba 4 tarjetas estáticas con totales históricos. Esta mejora lo convierte en un cuadro de mando real con métricas diarias, comparativas de tendencia, ranking de productos y un diseño visual diferenciado.
 
-Se añade `backend/routers/dashboard.py` con un único endpoint que agrega datos de varias tablas en una sola respuesta:
+---
+
+### Endpoint `GET /dashboard` — campos nuevos
+
+El endpoint ya existía. Se amplía para devolver métricas temporales (hoy, semana, mes) además de los totales históricos.
+
+**¿Por qué un único endpoint y no varios?**
+- Evita múltiples peticiones en paralelo al cargar la página.
+- La lógica de agregación (`SUM`, `AVG`, `GROUP BY`, `JOIN`) pertenece al backend.
+- Es más sencillo añadir caché en el futuro si el dashboard carga lento.
+
+**¿Por qué `float()` explícito en el return?**
+Las funciones `SUM()`, `AVG()` y `ROUND()` de MySQL devuelven objetos Python de tipo `Decimal`, que no son serializables a JSON por defecto. Se convierten con `float()` antes de retornar.
+
+La respuesta completa del endpoint tiene esta forma:
 
 ```python
-@enrutador.get("/dashboard")
-def obtener_estadisticas():
-    ...
-    return {
-        "total_pedidos": ...,
-        "total_ventas": ...,
-        "total_clientes": ...,
-        "total_productos": ...,
-        "stock_bajo": [...],        # productos donde stock <= stock_minimo
-        "ventas_por_mes": [...],    # últimos 6 meses agrupados por DATE_FORMAT(fecha, '%Y-%m')
-        "top_productos": [...],     # top 5 por unidades vendidas via JOIN con detalle_pedidos
+return {
+    # ── Totales históricos (todo el período) ──────────────
+    "total_pedidos":        3,
+    "total_ventas":         1619.59,
+    "total_clientes":       4,
+    "total_productos":      12,
+
+    # ── Caja diaria ───────────────────────────────────────
+    "pedidos_hoy":          0,       # COUNT(*) WHERE fecha = CURDATE()
+    "ventas_hoy":           0.0,     # SUM(total) WHERE fecha = CURDATE()
+
+    # ── Comparativa día anterior ──────────────────────────
+    "pedidos_ayer":         0,
+    "ventas_ayer":          0.0,
+
+    # ── Semana actual y anterior ──────────────────────────
+    "ventas_semana":        0.0,     # YEARWEEK(fecha, 1) = semana actual
+    "ventas_semana_anterior": 0.0,
+
+    # ── Mes actual y anterior ─────────────────────────────
+    "ventas_mes_actual":    0.0,
+    "ventas_mes_anterior":  0.0,
+
+    # ── Ticket medio (promedio por pedido) ────────────────
+    "ticket_medio_hoy":     0.0,     # AVG(total) WHERE fecha = CURDATE()
+    "ticket_medio_ayer":    0.0,
+
+    # ── Stock, gráfica y ranking ──────────────────────────
+    "stock_bajo":       [...],       # stock <= stock_minimo, ORDER BY stock ASC
+    "ventas_por_mes":   [...],       # DATE_FORMAT(fecha,'%Y-%m'), últimos 6 meses
+    "top_productos":    [...],       # ahora incluye importe_generado además de unidades
+}
+```
+
+Las nuevas consultas SQL relevantes:
+
+```sql
+-- Ticket medio: se usan dos CASE en una sola consulta para evitar una
+-- segunda ida a la BD. AVG ignora los NULL que produce el CASE no cumplido.
+SELECT
+    ROUND(COALESCE(AVG(CASE WHEN fecha = CURDATE()
+                       THEN total END), 0), 2) AS ticket_hoy,
+    ROUND(COALESCE(AVG(CASE WHEN fecha = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+                       THEN total END), 0), 2) AS ticket_ayer
+FROM pedidos
+WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 1 DAY);
+
+-- Top 5 productos: se añade importe_generado (cantidad × precio_unitario)
+SELECT p.nombre,
+       SUM(dp.cantidad) AS unidades_vendidas,
+       ROUND(SUM(dp.cantidad * dp.precio_unitario), 2) AS importe_generado
+FROM detalle_pedidos dp
+JOIN productos p ON p.id = dp.producto_id
+GROUP BY dp.producto_id, p.nombre
+ORDER BY unidades_vendidas DESC
+LIMIT 5;
+```
+
+**¿Por qué `YEARWEEK(fecha, 1)`?** El segundo argumento `1` indica que la semana empieza en lunes (norma ISO), que es lo habitual en España. Sin este argumento la semana empieza en domingo.
+
+---
+
+### `frontend/js/dashboard.js` — estructura de funciones
+
+```
+cargarDashboard()
+  └─ obtenerDatos('/dashboard')
+       └─ renderizarDashboard(datos)
+            ├─ _tendenciaHTML(actual, anterior, texto)
+            │    └─ _calcularTendencia(actual, anterior)
+            └─ _dibujarGrafica(ventasPorMes)
+```
+
+#### `_calcularTendencia(actual, anterior)`
+
+Compara dos valores y devuelve dirección y porcentaje de variación.
+
+```javascript
+function _calcularTendencia(actual, anterior) {
+    if (anterior === 0) {
+        return actual > 0
+            ? { pct: '100.0', direccion: 'up' }
+            : { pct: '0.0',   direccion: 'flat' };
     }
+    const diff = ((actual - anterior) / anterior) * 100;
+    return {
+        pct: Math.abs(diff).toFixed(1),
+        direccion: diff > 0.5 ? 'up' : diff < -0.5 ? 'down' : 'flat',
+    };
+}
 ```
 
-**Por qué un endpoint dedicado y no varias llamadas desde el frontend:**
-- Evita 5 peticiones en paralelo al cargar la página → una sola llamada.
-- La lógica de agregación (`SUM`, `GROUP BY`, `JOIN`) pertenece al backend, no al frontend.
-- Es más fácil añadir caché en el futuro si el dashboard carga lento.
+**¿Por qué el umbral de ±0.5 % en lugar de exactamente 0?** Para evitar que pequeñas diferencias de céntimos (0.01 €) muestren una flecha de tendencia que en realidad no es significativa.
 
-**Tipo `Decimal` de MySQL:** Las funciones `SUM()` y `ROUND()` de MySQL devuelven objetos Python de tipo `Decimal`, que no son serializables a JSON por defecto. Se convierten con `float()` explícitamente antes de retornar.
+#### `_tendenciaHTML(actual, anterior, textoComp)`
 
-Se registra el router en `main.py` protegido con JWT igual que el resto:
+Genera el HTML del indicador de tendencia. Recibe los dos valores a comparar y un texto descriptivo del período ("vs. ayer", "vs. sem. ant.", etc.).
 
-```python
-aplicacion.include_router(dashboard.enrutador, dependencies=[Depends(obtener_usuario_actual)])
+```javascript
+// Resultado: <span class="kpi-tendencia tendencia-sube">↑ +12.5% vs. ayer</span>
+function _tendenciaHTML(actual, anterior, textoComp) { ... }
 ```
 
-### Nuevo fichero: `frontend/js/dashboard.js`
+| Dirección | Clase CSS | Color | Flecha |
+|-----------|-----------|-------|--------|
+| Subida (> +0.5 %) | `.tendencia-sube` | Verde (`--color-exito`) | ↑ |
+| Bajada (< -0.5 %) | `.tendencia-baja` | Rojo (`--color-peligro`) | ↓ |
+| Sin cambio | `.tendencia-igual` | Gris (`--texto-suave`) | → |
 
-Contiene tres funciones principales:
+#### `_dibujarGrafica(ventasPorMes)`
 
-- **`cargarDashboard()`** — llamada por el sistema de navegación cuando el usuario activa la sección. Llama a `GET /dashboard` y delega el renderizado.
-- **`renderizarDashboard(datos)`** — construye el HTML completo: banner de alerta (si hay stock bajo), cuatro tarjetas KPI, el contenedor de la gráfica y las dos tablas inferiores.
-- **`_dibujarGrafica(ventasPorMes)`** — instancia un `Chart` de tipo `bar` con Chart.js. Antes de crear una instancia nueva, destruye la anterior (`_graficaVentas.destroy()`) para evitar que Canvas quede ocupado al volver a la sección.
+Instancia un `Chart` de tipo `bar` con Chart.js. Antes de crear una instancia nueva destruye la anterior (`_graficaVentas.destroy()`). Sin esto, cada vez que el usuario navega y vuelve al dashboard se acumulan capas invisibles sobre el mismo `<canvas>` y los eventos del ratón dejan de responder correctamente.
 
 **Chart.js** se carga desde CDN en `index.html` antes que los scripts propios:
+
 ```html
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 ```
 
+---
+
+### Componentes visuales — `frontend/css/estilos.css`
+
+La sección `DASHBOARD` del CSS se reescribió completa. Los componentes nuevos son:
+
+#### `.kpi-hero` — Caja diaria
+
+La tarjeta más prominente del dashboard. Ocupa todo el ancho y tiene un fondo con degradado oscuro (`linear-gradient`) para diferenciarse visualmente del resto de tarjetas blancas.
+
+```css
+.kpi-hero {
+    background: linear-gradient(135deg, #0f3460 0%, #16213e 55%, #0d5c36 100%);
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 28px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 20px rgba(15, 52, 96, 0.4);
+}
+```
+
+La "caja" se considera **abierta** si `pedidos_hoy > 0`. Como `pedidos.fecha` es de tipo `DATE` (no `DATETIME`), no es posible recuperar la hora exacta del primer pedido del día. Si en el futuro se añade una columna `created_at DATETIME DEFAULT NOW()`, se podría mostrar con `MIN(created_at) WHERE DATE(created_at) = CURDATE()`.
+
+Los estados de caja usan dos clases:
+
+```css
+.caja-abierta { background: rgba(22, 163, 74, 0.2); color: #86efac; } /* verde */
+.caja-cerrada { background: rgba(239, 68, 68, 0.18); color: #fca5a5; } /* rojo */
+```
+
+#### `.kpi-metricas` — Grid de 5 tarjetas
+
+Cinco tarjetas en un grid responsivo. Cada una tiene un borde superior de color diferente (aplicado con `style` inline en el JS) para diferenciarlas visualmente de un golpe de vista.
+
+```css
+.kpi-metricas {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+}
+```
+
+| Tarjeta | Color del borde |
+|---------|----------------|
+| Ventas hoy | `#3b82f6` (azul) |
+| Ventas semana | `#8b5cf6` (violeta) |
+| Ventas mes | `#f59e0b` (ámbar) |
+| Ticket medio | `#10b981` (verde) |
+| Pedidos hoy | `#ef4444` (rojo) |
+
+**¿Por qué el color en `style` inline y no en una clase CSS?** Porque cada tarjeta necesita un color diferente. Definir cinco clases `.kpi-metrica--azul`, `.kpi-metrica--violeta`... sería más verboso sin ninguna ventaja real para un caso tan puntual.
+
+#### `.top-producto-barra-fill` — Barra de progreso relativa
+
+La barra del producto #1 ocupa siempre el 100 %. El resto se calcula proporcionalmente:
+
+```javascript
+const maxUnidades = datos.top_productos[0].unidades_vendidas;
+const pct = Math.round((p.unidades_vendidas / maxUnidades) * 100);
+// → style="width: 75%"
+```
+
+**¿Por qué relativo al #1 y no al total de unidades vendidas?** Porque el objetivo es mostrar la diferencia entre productos, no la cuota de mercado. Si el #1 tiene 100 unidades y el #2 tiene 90, tiene más sentido ver la barra del #2 casi llena que ver ambas prácticamente vacías porque el total es 10.000.
+
+#### Responsividad
+
+```css
+@media (max-width: 1200px) { .kpi-metricas { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 900px)  { .kpi-metricas { grid-template-columns: repeat(2, 1fr); }
+                              .dashboard-grid { grid-template-columns: 1fr; } }
+@media (max-width: 600px)  { .kpi-metricas { grid-template-columns: 1fr; } }
+```
+
+---
+
 ### Cambios en `index.html` y `app.js`
 
-- Se añade `<section id="sec-dashboard">` al contenido principal.
-- Se añade `dashboard` como primera entrada del nav y primera clave de `SECCIONES` en `app.js`.
-- El hash por defecto pasa de `#categorias` a `#dashboard`, tanto en `app.js` como en `auth.js`. Así el usuario aterriza en el dashboard tras el login.
+Estos ficheros no cambian con esta mejora: la sección `<section id="sec-dashboard">` y la entrada en el nav ya existían desde la primera versión del dashboard. Solo cambia lo que se renderiza dentro del contenedor `#dashboard-contenido`.
+
+---
+
+### Cómo extender el dashboard en el futuro
+
+| Idea | Qué tocar |
+|------|-----------|
+| Añadir un KPI nuevo | 1 consulta SQL en `dashboard.py`, 1 campo en el `return`, 1 `.kpi-metrica` en `dashboard.js` |
+| Selector de período (hoy / semana / mes) | Convertir el endpoint en `GET /dashboard?periodo=semana` y parametrizar los `WHERE` |
+| Objetivo diario de ventas | Tabla `configuracion` con el objetivo; barra de progreso en `.kpi-hero` con `(ventas_hoy / objetivo) * 100` |
+| Hora de apertura de caja | Añadir `created_at DATETIME DEFAULT NOW()` a `pedidos`; usar `MIN(created_at)` en la consulta |
+| Caché del dashboard | `@functools.lru_cache` en el endpoint o tabla de resumen precalculado con un cronjob |
 
 ---
 

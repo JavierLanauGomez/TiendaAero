@@ -539,43 +539,19 @@ body {
 }
 
 /* ============================================================
-   DASHBOARD
+   DASHBOARD — Panel de control principal
+   Componentes:
+     .kpi-hero        — Card destacada de caja diaria
+     .kpi-metricas    — Grid de 5 tarjetas de métricas
+     .kpi-tendencia   — Indicadores de tendencia (↑↓→)
+     .panel-card      — Contenedor genérico de sección
+     .top-producto-*  — Lista de top 5 productos
+     .alerta-stock    — Banner de alerta de stock
+     .badge-nav       — Badge rojo en el nav lateral
    ============================================================ */
 
-/* Grid de tarjetas KPI */
-.dashboard-kpis {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.kpi-card {
-  background: var(--blanco);
-  border-radius: var(--radio);
-  box-shadow: var(--sombra);
-  padding: 24px;
-  border-left: 4px solid var(--color-primario);
-}
-
-/* La tarjeta de stock bajo se pinta en rojo cuando hay alertas */
-.kpi-card-alerta {
-  border-left-color: var(--color-peligro);
-}
-
-.kpi-valor {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--texto);
-  margin-bottom: 4px;
-}
-
-.kpi-etiqueta {
-  font-size: 13px;
-  color: var(--texto-suave);
-}
-
-/* Banner rojo de alerta de stock */
+/* ── Banner de alerta de stock ──────────────────────────────────────────── */
+/* Se muestra en la parte superior cuando hay productos por debajo del mínimo */
 .alerta-stock {
   background: #fee2e2;
   color: #991b1b;
@@ -593,37 +569,271 @@ body {
   margin-left: 8px;
 }
 
-/* Contenedor de la grafica */
-.grafica-contenedor {
-  background: var(--blanco);
-  border-radius: var(--radio);
-  box-shadow: var(--sombra);
-  padding: 24px;
-  margin-bottom: 24px;
+/* ── CAJA DIARIA: card hero destacada ───────────────────────────────────── */
+/* La card más prominente del dashboard. Fondo con degradado oscuro para que
+   resalte visualmente sobre las demás tarjetas blancas. */
+.kpi-hero {
+  background: linear-gradient(135deg, #0f3460 0%, #16213e 55%, #0d5c36 100%);
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 28px 32px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(15, 52, 96, 0.4);
+  flex-wrap: wrap;
+  gap: 20px;
 }
 
-.grafica-titulo {
-  font-size: 15px;
+.kpi-hero-izquierda { flex: 1; min-width: 200px; }
+
+/* Etiqueta superior de la card hero */
+.kpi-hero-titulo {
+  font-size: 12px;
   font-weight: 600;
-  margin-bottom: 16px;
-  color: var(--texto);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: rgba(255,255,255,0.65);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-/* Grid de dos columnas para las tablas del dashboard */
+.kpi-hero-icono { font-size: 18px; }
+
+/* Cifra principal — grande y dominante */
+.kpi-hero-valor {
+  font-size: 48px;
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  color: #ffffff;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+
+.kpi-hero-meta { font-size: 13px; color: rgba(255,255,255,0.7); }
+
+.kpi-hero-derecha { text-align: right; }
+
+/* Texto "Estado de caja" encima del badge */
+.kpi-hero-estado-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 6px;
+}
+
+/* Badges de estado: abierta (verde suave) o cerrada (rojo suave) */
+.caja-badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 14px;
+  border-radius: 99px;
+  margin-bottom: 10px;
+}
+
+.caja-abierta {
+  background: rgba(22, 163, 74, 0.2);
+  color: #86efac;
+  border: 1px solid rgba(134, 239, 172, 0.3);
+}
+
+.caja-cerrada {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+  border: 1px solid rgba(252, 165, 165, 0.3);
+}
+
+.kpi-hero-subtexto { font-size: 13px; color: rgba(255,255,255,0.5); }
+
+/* ── GRID DE 5 KPIs ─────────────────────────────────────────────────────── */
+/* Responsivo: 5 columnas en escritorio, 3 en tablet, 2 en móvil amplio,
+   1 en móvil estrecho. */
+.kpi-metricas {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* Tarjeta individual de métrica */
+.kpi-metrica {
+  background: var(--blanco);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.07);
+  border-top: 4px solid transparent; /* el color lo añade el JS via style inline */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Icono decorativo con fondo de color suave */
+.kpi-metrica-icono {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+/* Número principal de cada tarjeta — grande y legible al primer vistazo */
+.kpi-metrica-valor {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--texto);
+  line-height: 1.1;
+}
+
+/* Etiqueta descriptiva breve */
+.kpi-metrica-titulo {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--texto-suave);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+/* Subtexto auxiliar (ej: "Basado en X transacciones") */
+.kpi-metrica-sub {
+  font-size: 11px;
+  color: var(--texto-suave);
+  margin-top: 2px;
+}
+
+/* ── INDICADORES DE TENDENCIA ────────────────────────────────────────────── */
+/* Flechas con color inmediato: verde subida, rojo bajada, gris sin cambio */
+.kpi-tendencia {
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.tendencia-sube  { color: var(--color-exito); }   /* ↑ verde  */
+.tendencia-baja  { color: var(--color-peligro); } /* ↓ rojo   */
+.tendencia-igual { color: var(--texto-suave); }   /* → gris   */
+
+/* ── PANEL CARD GENÉRICO ─────────────────────────────────────────────────── */
+/* Contenedor blanco con sombra. Usado para top productos, gráfica y stock. */
+.panel-card {
+  background: var(--blanco);
+  border-radius: 10px;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.07);
+  padding: 24px;
+}
+
+.panel-titulo {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--texto);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Badge rojo junto al título del panel de stock bajo */
+.panel-badge-alerta {
+  background: var(--color-peligro);
+  color: var(--blanco);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+/* ── GRID DE DOS COLUMNAS (top productos + gráfica) ─────────────────────── */
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  gap: 20px;
 }
 
-/* Celda vacia centrada en tablas */
+/* ── TOP 5 PRODUCTOS ─────────────────────────────────────────────────────── */
+/* Lista con ranking visual, barra de progreso relativa y estadísticas */
+.top-productos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.top-producto-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Medalla o posición numérica de cada producto */
+.top-producto-rank {
+  font-size: 20px;
+  min-width: 30px;
+  text-align: center;
+  line-height: 1;
+}
+
+.top-producto-info { flex: 1; min-width: 0; }
+
+/* Nombre del producto: truncado con ellipsis si es muy largo */
+.top-producto-nombre {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 5px;
+}
+
+/* Barra de progreso relativa al producto #1 (= 100 %) */
+.top-producto-barra {
+  background: #f1f5f9;
+  border-radius: 99px;
+  height: 6px;
+  overflow: hidden;
+}
+
+.top-producto-barra-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+  border-radius: 99px;
+}
+
+/* Columna derecha: unidades (grande) e importe (pequeño) */
+.top-producto-stats { text-align: right; min-width: 80px; }
+
+.top-stat-principal {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--texto);
+}
+
+.top-stat-secundario {
+  font-size: 11px;
+  color: var(--texto-suave);
+}
+
+/* ── UTILIDADES ──────────────────────────────────────────────────────────── */
+
+/* Celda vacía centrada en tablas */
 .celda-vacia {
   text-align: center;
   color: var(--texto-suave);
   padding: 20px !important;
 }
 
-/* Badge rojo en el nav para alertas de stock */
+/* Badge rojo en el nav lateral para alertas de stock */
 .badge-nav {
   display: inline-block;
   background: var(--color-peligro);
@@ -635,4 +845,181 @@ body {
   margin-left: 6px;
   vertical-align: middle;
   line-height: 1.4;
+}
+
+/* ── RESPONSIVIDAD ───────────────────────────────────────────────────────── */
+
+/* Tablet ancha: 3 columnas de métricas */
+@media (max-width: 1200px) {
+  .kpi-metricas { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* Tablet: 2 columnas de métricas, gráfica y top en columna única */
+@media (max-width: 900px) {
+  .kpi-metricas  { grid-template-columns: repeat(2, 1fr); }
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .kpi-hero-valor { font-size: 36px; }
+}
+
+/* Móvil: todo en columna única, hero en columna también */
+@media (max-width: 600px) {
+  .kpi-metricas { grid-template-columns: 1fr; }
+  .kpi-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .kpi-hero-derecha { text-align: left; }
+}
+
+/* ============================================================
+   SECCION INICIO
+   ============================================================ */
+
+/* Hero banner */
+.inicio-hero {
+  background: linear-gradient(135deg, #1e293b 0%, #1d3461 60%, #2563eb 100%);
+  border-radius: 16px;
+  padding: 64px 48px;
+  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+}
+
+.inicio-hero-contenido {
+  max-width: 600px;
+}
+
+.inicio-hero-icono {
+  font-size: 56px;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.inicio-hero-contenido h1 {
+  font-size: 36px;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+
+.inicio-hero-contenido p {
+  font-size: 16px;
+  color: #94a3b8;
+  margin-bottom: 28px;
+  line-height: 1.6;
+}
+
+.btn-hero {
+  background: #2563eb;
+  color: #ffffff;
+  border: 2px solid #3b82f6;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.btn-hero:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+/* Tarjetas de acceso rapido */
+.inicio-accesos {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.inicio-card {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.1s, border-color 0.15s;
+}
+
+.inicio-card:hover {
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15);
+  border-color: #93c5fd;
+  transform: translateY(-2px);
+}
+
+.inicio-card-icono {
+  font-size: 36px;
+  margin-bottom: 12px;
+}
+
+.inicio-card h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--texto);
+  margin-bottom: 6px;
+}
+
+.inicio-card p {
+  font-size: 12px;
+  color: var(--texto-suave);
+  line-height: 1.5;
+}
+
+/* Bloque "Sobre la tienda" */
+.inicio-sobre {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 32px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.inicio-sobre-texto h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--texto);
+}
+
+.inicio-sobre-texto p {
+  font-size: 14px;
+  color: var(--texto-suave);
+  line-height: 1.7;
+}
+
+.inicio-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-content: flex-start;
+}
+
+.inicio-tag {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .inicio-accesos { grid-template-columns: repeat(2, 1fr); }
+  .inicio-sobre   { grid-template-columns: 1fr; }
+  .inicio-hero    { padding: 40px 24px; }
+  .inicio-hero-contenido h1 { font-size: 26px; }
+}
+
+@media (max-width: 600px) {
+  .inicio-accesos { grid-template-columns: 1fr 1fr; }
+  .inicio-hero-icono { font-size: 40px; }
 }

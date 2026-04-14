@@ -72,6 +72,7 @@
     <nav class="sidebar">
       <div class="logo">✈ TiendaAero</div>
       <ul class="nav-lista">
+        <li><a href="#inicio"     class="nav-enlace" data-seccion="inicio">Inicio</a></li>
         <li><a href="#dashboard"  class="nav-enlace" data-seccion="dashboard">Dashboard</a></li>
         <li><a href="#categorias" class="nav-enlace" data-seccion="categorias">Categorias</a></li>
         <li>
@@ -88,6 +89,58 @@
 
     <!-- CONTENIDO PRINCIPAL -->
     <main class="contenido">
+
+      <!-- SECCION INICIO -->
+      <section id="sec-inicio" class="seccion oculta">
+        <div class="inicio-hero">
+          <div class="inicio-hero-contenido">
+            <div class="inicio-hero-icono">✈</div>
+            <h1>Bienvenido a TiendaAero</h1>
+            <p>Panel de gestión para tu tienda especializada en drones y equipos aéreos</p>
+            <button class="btn btn-hero" onclick="location.hash='#dashboard'">Ver dashboard</button>
+          </div>
+        </div>
+
+        <div class="inicio-accesos">
+          <div class="inicio-card" onclick="location.hash='#dashboard'">
+            <div class="inicio-card-icono">📊</div>
+            <h3>Dashboard</h3>
+            <p>Estadísticas y métricas en tiempo real del negocio</p>
+          </div>
+          <div class="inicio-card" onclick="location.hash='#productos'">
+            <div class="inicio-card-icono">🚁</div>
+            <h3>Productos</h3>
+            <p>Gestiona el catálogo de drones y accesorios</p>
+          </div>
+          <div class="inicio-card" onclick="location.hash='#clientes'">
+            <div class="inicio-card-icono">👥</div>
+            <h3>Clientes</h3>
+            <p>Base de datos de clientes registrados</p>
+          </div>
+          <div class="inicio-card" onclick="location.hash='#pedidos'">
+            <div class="inicio-card-icono">📦</div>
+            <h3>Pedidos</h3>
+            <p>Control de pedidos y estado de envíos</p>
+          </div>
+        </div>
+
+        <div class="inicio-sobre">
+          <div class="inicio-sobre-texto">
+            <h2>Especialistas en equipos aéreos</h2>
+            <p>TiendaAero es tu plataforma de gestión para la venta de drones profesionales, de ocio y accesorios aeronáuticos. Desde drones de fotografía aérea hasta equipos de inspección industrial, todo centralizado en un único panel.</p>
+          </div>
+          <div class="inicio-tags">
+            <span class="inicio-tag">🚁 Drones profesionales</span>
+            <span class="inicio-tag">📷 Drones fotográficos</span>
+            <span class="inicio-tag">🔋 Baterías y cargadores</span>
+            <span class="inicio-tag">📡 Mandos y controladores</span>
+            <span class="inicio-tag">🛡️ Fundas y protecciones</span>
+            <span class="inicio-tag">🔧 Repuestos y piezas</span>
+            <span class="inicio-tag">🌐 Accesorios FPV</span>
+            <span class="inicio-tag">📐 Equipos de inspección</span>
+          </div>
+        </div>
+      </section>
 
       <!-- SECCION DASHBOARD -->
       <section id="sec-dashboard" class="seccion oculta">
