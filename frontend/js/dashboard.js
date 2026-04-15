@@ -40,29 +40,29 @@ async function cargarDashboard() {
 function _calcularTendencia(actual, anterior) {
   if (anterior === 0) {
     return actual > 0
-      ? { pct: '100.0', direccion: 'up' }
-      : { pct: '0.0', direccion: 'flat' };
+      ? { porcentaje: '100.0', direccion: 'sube' }
+      : { porcentaje: '0.0',   direccion: 'igual' };
   }
-  const diff = ((actual - anterior) / anterior) * 100;
+  const diferencia = ((actual - anterior) / anterior) * 100;
   return {
-    pct: Math.abs(diff).toFixed(1),
-    direccion: diff > 0.5 ? 'up' : diff < -0.5 ? 'down' : 'flat',
+    porcentaje: Math.abs(diferencia).toFixed(1),
+    direccion:  diferencia > 0.5 ? 'sube' : diferencia < -0.5 ? 'baja' : 'igual',
   };
 }
 
 // ----------------------------------------------------------
 // HTML DE INDICADOR DE TENDENCIA
 // Genera el span con flecha y color según la comparativa.
-// textoComp: texto que sigue al porcentaje ("vs. ayer", etc.)
+// textoComparativa: texto que sigue al porcentaje ("vs. ayer", etc.)
 // ----------------------------------------------------------
-function _tendenciaHTML(actual, anterior, textoComp) {
-  const { pct, direccion } = _calcularTendencia(actual, anterior);
-  const cfg = {
-    up:   { flecha: '↑', clase: 'tendencia-sube',  etiqueta: `+${pct}%` },
-    down: { flecha: '↓', clase: 'tendencia-baja',  etiqueta: `-${pct}%` },
-    flat: { flecha: '→', clase: 'tendencia-igual', etiqueta: `0%` },
+function _tendenciaHTML(actual, anterior, textoComparativa) {
+  const { porcentaje, direccion } = _calcularTendencia(actual, anterior);
+  const opciones = {
+    sube:  { flecha: '↑', clase: 'tendencia-sube',  etiqueta: `+${porcentaje}%` },
+    baja:  { flecha: '↓', clase: 'tendencia-baja',  etiqueta: `-${porcentaje}%` },
+    igual: { flecha: '→', clase: 'tendencia-igual', etiqueta: `0%` },
   }[direccion];
-  return `<span class="kpi-tendencia ${cfg.clase}">${cfg.flecha} ${cfg.etiqueta} ${textoComp}</span>`;
+  return `<span class="kpi-tendencia ${opciones.clase}">${opciones.flecha} ${opciones.etiqueta} ${textoComparativa}</span>`;
 }
 
 // ----------------------------------------------------------
@@ -267,8 +267,8 @@ function _dibujarGrafica(ventasPorMes) {
   const etiquetas = ventasPorMes.map(v => v.mes);
   const valores   = ventasPorMes.map(v => v.total_ventas);
 
-  const ctx = document.getElementById('grafica-ventas').getContext('2d');
-  _graficaVentas = new Chart(ctx, {
+  const contexto = document.getElementById('grafica-ventas').getContext('2d');
+  _graficaVentas = new Chart(contexto, {
     type: 'bar',
     data: {
       labels: etiquetas,

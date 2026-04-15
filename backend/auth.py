@@ -49,8 +49,8 @@ def obtener_usuario_actual(token: str = Depends(esquema_oauth2)) -> str:
     Si el token no es valido o expiro, FastAPI devuelve HTTP 401 automaticamente.
     """
     try:
-        payload = jwt.decode(token, CLAVE_SECRETA, algorithms=[ALGORITMO])
-        usuario: str = payload.get("sub")
+        datos_token = jwt.decode(token, CLAVE_SECRETA, algorithms=[ALGORITMO])
+        usuario: str = datos_token.get("sub")
         if usuario is None:
             raise HTTPException(status_code=401, detail="Token invalido")
         return usuario

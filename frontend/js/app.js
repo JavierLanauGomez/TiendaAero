@@ -141,10 +141,10 @@ function formatearFecha(fechaStr) {
 // CONFIRMAR (modal en lugar del confirm() nativo)
 // Uso: confirmar('¿Eliminar este producto?', () => eliminar(id))
 // ----------------------------------------------------------
-let _confirmarCallback = null;
+let _accionConfirmar = null;
 
 function confirmar(mensaje, accion) {
-  _confirmarCallback = accion;
+  _accionConfirmar = accion;
   abrirModal('Confirmar', `
     <p style="margin-bottom:24px">${escapeHtml(mensaje)}</p>
     <div class="form-botones">
@@ -156,8 +156,8 @@ function confirmar(mensaje, accion) {
 
 function _ejecutarConfirmacion() {
   cerrarModal();
-  if (_confirmarCallback) _confirmarCallback();
-  _confirmarCallback = null;
+  if (_accionConfirmar) _accionConfirmar();
+  _accionConfirmar = null;
 }
 
 // ----------------------------------------------------------

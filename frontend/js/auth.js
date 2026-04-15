@@ -62,11 +62,11 @@ function mostrarApp() {
 async function enviarLogin(evento) {
   evento.preventDefault();
 
-  const usuario    = document.getElementById('login-usuario').value.trim();
-  const contrasena = document.getElementById('login-contrasena').value;
-  const errorDiv   = document.getElementById('login-error');
+  const usuario        = document.getElementById('login-usuario').value.trim();
+  const contrasena     = document.getElementById('login-contrasena').value;
+  const elementoError  = document.getElementById('login-error');
 
-  errorDiv.textContent = '';
+  elementoError.textContent = '';
 
   // La API de login espera form-data (estandar OAuth2), no JSON
   const cuerpo = new URLSearchParams({ username: usuario, password: contrasena });
@@ -80,7 +80,7 @@ async function enviarLogin(evento) {
 
     if (!respuesta.ok) {
       const datos = await respuesta.json().catch(() => ({}));
-      errorDiv.textContent = datos.detail || 'Usuario o contraseña incorrectos';
+      elementoError.textContent = datos.detail || 'Usuario o contraseña incorrectos';
       return;
     }
 
@@ -93,7 +93,7 @@ async function enviarLogin(evento) {
     navegarA('#inicio');
 
   } catch (_) {
-    errorDiv.textContent = 'No se puede conectar con el servidor';
+    elementoError.textContent = 'No se puede conectar con el servidor';
   }
 }
 
@@ -103,17 +103,17 @@ async function enviarLogin(evento) {
 async function enviarRegistro(evento) {
   evento.preventDefault();
 
-  const usuario     = document.getElementById('reg-usuario').value.trim();
-  const contrasena  = document.getElementById('reg-contrasena').value;
-  const contrasena2 = document.getElementById('reg-contrasena2').value;
-  const errorDiv    = document.getElementById('reg-error');
-  const exitoDiv    = document.getElementById('reg-exito');
+  const usuario        = document.getElementById('reg-usuario').value.trim();
+  const contrasena     = document.getElementById('reg-contrasena').value;
+  const contrasena2    = document.getElementById('reg-contrasena2').value;
+  const elementoError  = document.getElementById('reg-error');
+  const elementoExito  = document.getElementById('reg-exito');
 
-  errorDiv.textContent = '';
-  exitoDiv.textContent = '';
+  elementoError.textContent = '';
+  elementoExito.textContent = '';
 
   if (contrasena !== contrasena2) {
-    errorDiv.textContent = 'Las contraseñas no coinciden';
+    elementoError.textContent = 'Las contraseñas no coinciden';
     return;
   }
 
@@ -127,15 +127,15 @@ async function enviarRegistro(evento) {
     const datos = await respuesta.json().catch(() => ({}));
 
     if (!respuesta.ok) {
-      errorDiv.textContent = datos.detail || 'Error al crear el usuario';
+      elementoError.textContent = datos.detail || 'Error al crear el usuario';
       return;
     }
 
-    exitoDiv.textContent = 'Usuario creado. Ahora puedes iniciar sesion.';
+    elementoExito.textContent = 'Usuario creado. Ahora puedes iniciar sesion.';
     setTimeout(() => mostrarLogin(), 1500);
 
   } catch (_) {
-    errorDiv.textContent = 'No se puede conectar con el servidor';
+    elementoError.textContent = 'No se puede conectar con el servidor';
   }
 }
 

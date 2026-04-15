@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
-from database import obtener_conexion
+from database import obtener_cursor
 from auth import verificar_contrasena, crear_token, hashear_contrasena
 
 enrutador = APIRouter(prefix="/auth", tags=["autenticacion"])
@@ -20,26 +20,19 @@ def registro(datos: DatosRegistro):
     if not datos.nombre_usuario.strip() or not datos.contrasena:
         raise HTTPException(status_code=422, detail="Usuario y contraseña son obligatorios")
 
-    conexion = obtener_conexion()
-    cursor   = conexion.cursor(dictionary=True)
+    with obtener_cursor(dictionary=True) as (_, cursor):
+        cursor.execute(
+            "SELECT id FROM usuarios WHERE nombre_usuario = %s",
+            (datos.nombre_usuario,)
+        )
+        if cursor.fetchone():
+            raise HTTPException(status_code=409, detail="El nombre de usuario ya existe")
 
-    cursor.execute(
-        "SELECT id FROM usuarios WHERE nombre_usuario = %s",
-        (datos.nombre_usuario,)
-    )
-    if cursor.fetchone():
-        cursor.close()
-        conexion.close()
-        raise HTTPException(status_code=409, detail="El nombre de usuario ya existe")
-
-    hash_pwd = hashear_contrasena(datos.contrasena)
-    cursor.execute(
-        "INSERT INTO usuarios (nombre_usuario, contrasena_hash) VALUES (%s, %s)",
-        (datos.nombre_usuario, hash_pwd)
-    )
-    conexion.commit()
-    cursor.close()
-    conexion.close()
+        hash_contrasena = hashear_contrasena(datos.contrasena)
+        cursor.execute(
+            "INSERT INTO usuarios (nombre_usuario, contrasena_hash) VALUES (%s, %s)",
+            (datos.nombre_usuario, hash_contrasena)
+        )
 
     return {"mensaje": "Usuario creado correctamente"}
 
@@ -53,15 +46,12 @@ def login(datos: OAuth2PasswordRequestForm = Depends()):
     El cliente debe guardar el token y enviarlo en futuras peticiones:
       Authorization: Bearer <token>
     """
-    conexion = obtener_conexion()
-    cursor   = conexion.cursor(dictionary=True)
-    cursor.execute(
-        "SELECT * FROM usuarios WHERE nombre_usuario = %s",
-        (datos.username,)
-    )
-    usuario = cursor.fetchone()
-    cursor.close()
-    conexion.close()
+    with obtener_cursor(dictionary=True) as (_, cursor):
+        cursor.execute(
+            "SELECT * FROM usuarios WHERE nombre_usuario = %s",
+            (datos.username,)
+        )
+        usuario = cursor.fetchone()
 
     # Verificamos que el usuario existe Y que la contraseña es correcta.
     # Hacemos las dos comprobaciones antes de responder para no dar pistas
@@ -69,6 +59,6 @@ def login(datos: OAuth2PasswordRequestForm = Depends()):
     if not usuario or not verificar_contrasena(datos.password, usuario["contrasena_hash"]):
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
 
-    token = crear_token(usuario["nombre_usuario"])
+    ficha = crear_token(usuario["nombre_usuario"])
     # La respuesta sigue el estandar OAuth2: access_token + token_type
-    return {"access_token": token, "token_type": "bearer"}
+    return {"access_token": ficha, "token_type": "bearer"}
