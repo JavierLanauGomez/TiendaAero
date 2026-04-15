@@ -17,7 +17,9 @@ async function cargarPedidos() {
       _clientes = await obtenerDatos('/clientes');
     }
 
-    _pedidos = await obtenerDatos('/pedidos');
+    // El backend devuelve { pedidos: [...], total: N, pagina: 1, tamano: 100 }
+    const respuesta = await obtenerDatos('/pedidos');
+    _pedidos = respuesta.pedidos;
 
     if (_pedidos.length === 0) {
       mostrarMensaje('tabla-pedidos', 'No hay pedidos todavia.');
@@ -40,8 +42,8 @@ async function cargarPedidos() {
           ${_pedidos.map(pedido => `
             <tr>
               <td>${pedido.id}</td>
-              <td>${buscarNombreCliente(pedido.cliente_id)}</td>
-              <td>${pedido.fecha}</td>
+              <td>${escapeHtml(buscarNombreCliente(pedido.cliente_id))}</td>
+              <td>${formatearFecha(pedido.fecha)}</td>
               <td>${Number(pedido.total).toFixed(2)} €</td>
               <td><span class="badge badge-${pedido.estado}">${pedido.estado}</span></td>
               <td class="acciones">
@@ -49,11 +51,12 @@ async function cargarPedidos() {
                         onclick="verDetallePedido(${pedido.id})">Ver</button>
                 <button class="btn btn-secundario btn-sm"
                         onclick="editarPedido(${pedido.id})">Editar lineas</button>
-                <select class="select-estado"
-                        onchange="cambiarEstado(${pedido.id}, this.value)">
+                <select class="select-estado" data-anterior="${pedido.estado}"
+                        onchange="confirmarCambioEstado(${pedido.id}, this)">
                   <option value="pendiente"  ${pedido.estado === 'pendiente'  ? 'selected' : ''}>Pendiente</option>
                   <option value="enviado"    ${pedido.estado === 'enviado'    ? 'selected' : ''}>Enviado</option>
                   <option value="entregado"  ${pedido.estado === 'entregado'  ? 'selected' : ''}>Entregado</option>
+                  <option value="cancelado"  ${pedido.estado === 'cancelado'  ? 'selected' : ''}>Cancelado</option>
                 </select>
               </td>
             </tr>
@@ -87,8 +90,8 @@ async function verDetallePedido(id) {
     const pedido = await obtenerDatos(`/pedidos/${id}`);
 
     abrirModal(`Pedido #${id}`, `
-      <p><strong>Cliente:</strong> ${buscarNombreCliente(pedido.cliente_id)}</p>
-      <p><strong>Fecha:</strong> ${pedido.fecha}</p>
+      <p><strong>Cliente:</strong> ${escapeHtml(buscarNombreCliente(pedido.cliente_id))}</p>
+      <p><strong>Fecha:</strong> ${formatearFecha(pedido.fecha)}</p>
       <p><strong>Estado:</strong> <span class="badge badge-${pedido.estado}">${pedido.estado}</span></p>
       <br>
       <table class="tabla">
@@ -103,7 +106,7 @@ async function verDetallePedido(id) {
         <tbody>
           ${pedido.lineas.map(linea => `
             <tr>
-              <td>${buscarNombreProducto(linea.producto_id)}</td>
+              <td>${escapeHtml(buscarNombreProducto(linea.producto_id))}</td>
               <td>${linea.cantidad}</td>
               <td>${Number(linea.precio_unitario).toFixed(2)} €</td>
               <td>${(linea.cantidad * linea.precio_unitario).toFixed(2)} €</td>
@@ -123,7 +126,16 @@ async function verDetallePedido(id) {
 
 // ----------------------------------------------------------
 // CAMBIAR ESTADO (desde el select de la tabla)
+// Pide confirmacion antes de ejecutar el cambio.
 // ----------------------------------------------------------
+function confirmarCambioEstado(id, select) {
+  const nuevoEstado = select.value;
+  const estadoAnterior = select.dataset.anterior;
+  // Revertir visualmente mientras se confirma
+  select.value = estadoAnterior;
+  confirmar(`¿Cambiar el estado a "${nuevoEstado}"?`, () => cambiarEstado(id, nuevoEstado));
+}
+
 async function cambiarEstado(id, nuevoEstado) {
   try {
     await modificarDatos(`/pedidos/${id}/estado`, { estado: nuevoEstado });
@@ -143,13 +155,16 @@ async function abrirFormPedido() {
     try { _clientes = await obtenerDatos('/clientes'); } catch (_) {}
   }
   if (_productos.length === 0) {
-    try { _productos = await obtenerDatos('/productos'); } catch (_) {}
+    try {
+      const resp = await obtenerDatos('/productos');
+      _productos = resp.productos;
+    } catch (_) {}
   }
 
   _contadorLineas = 0;
 
   const opcionesClientes = _clientes.map(cliente =>
-    `<option value="${cliente.id}">${cliente.nombre}</option>`
+    `<option value="${cliente.id}">${escapeHtml(cliente.nombre)}</option>`
   ).join('');
 
   abrirModal('Nuevo pedido', `
@@ -195,7 +210,7 @@ function agregarLineaPedido() {
   const numero = _contadorLineas;
 
   const opcionesProductos = _productos.map(producto =>
-    `<option value="${producto.id}">${producto.nombre} — ${Number(producto.precio).toFixed(2)} €</option>`
+    `<option value="${producto.id}">${escapeHtml(producto.nombre)} — ${Number(producto.precio).toFixed(2)} €</option>`
   ).join('');
 
   const nuevaLinea = document.createElement('div');
@@ -266,7 +281,8 @@ async function guardarPedido(evento) {
     mostrarToast(`Pedido creado — Total: ${Number(resultado.total).toFixed(2)} €`);
     cerrarModal();
     // Recargar productos para ver el stock actualizado
-    _productos = await obtenerDatos('/productos');
+    const resp = await obtenerDatos('/productos');
+    _productos = resp.productos;
     actualizarBadgeStock(_productos.filter(p => p.stock <= p.stock_minimo).length);
     cargarPedidos();
   } catch (error) {
@@ -285,13 +301,14 @@ async function editarPedido(id) {
       _clientes = await obtenerDatos('/clientes');
     }
     if (_productos.length === 0) {
-      _productos = await obtenerDatos('/productos');
+      const resp = await obtenerDatos('/productos');
+      _productos = resp.productos;
     }
 
     _contadorLineas = 0;
 
     const opcionesClientes = _clientes.map(c =>
-      `<option value="${c.id}" ${c.id === pedido.cliente_id ? 'selected' : ''}>${c.nombre}</option>`
+      `<option value="${c.id}" ${c.id === pedido.cliente_id ? 'selected' : ''}>${escapeHtml(c.nombre)}</option>`
     ).join('');
 
     abrirModal(`Editar pedido #${id}`, `
@@ -362,7 +379,8 @@ async function guardarEdicionPedido(evento, id) {
     const resultado = await modificarDatos(`/pedidos/${id}/lineas`, { lineas });
     mostrarToast(`Pedido actualizado — Total: ${Number(resultado.total).toFixed(2)} €`);
     cerrarModal();
-    _productos = await obtenerDatos('/productos');
+    const resp = await obtenerDatos('/productos');
+    _productos = resp.productos;
     actualizarBadgeStock(_productos.filter(p => p.stock <= p.stock_minimo).length);
     cargarPedidos();
   } catch (error) {

@@ -3084,3 +3084,329 @@ El endpoint nuevo se añade a la referencia de la sección 27:
 | Método | Ruta | Qué hace |
 |--------|------|----------|
 | GET | `/clientes/{id}/pedidos` | Devuelve todos los pedidos de ese cliente ordenados por fecha descendente |
+
+---
+
+## 35. Mejoras v2 — Backend robustecido y Frontend pulido
+
+Este bloque documenta las mejoras implementadas en la segunda iteración del proyecto, agrupadas por capa.
+
+---
+
+### 35.1 Backend — Context manager para conexiones
+
+**Problema anterior:** cada función de router abría una conexión y un cursor manualmente, con el riesgo de dejar la conexión abierta si se producía una excepción antes de `conexion.close()`.
+
+**Solución:** función `obtener_cursor()` con `@contextmanager` en `database.py`:
+
+```python
+from contextlib import contextmanager
+
+@contextmanager
+def obtener_cursor(dictionary=False):
+    conexion = obtener_conexion()
+    cursor = conexion.cursor(dictionary=dictionary)
+    try:
+        yield conexion, cursor
+        conexion.commit()       # commit automático al salir sin error
+    except Exception:
+        conexion.rollback()     # rollback automático si hay excepción
+        raise
+    finally:
+        cursor.close()
+        conexion.close()        # siempre se cierra, pase lo que pase
+```
+
+**Uso en un router:**
+```python
+with obtener_cursor(dictionary=True) as (conexion, cursor):
+    cursor.execute("SELECT * FROM productos")
+    return cursor.fetchall()
+```
+
+**¿Por qué `dictionary=True`?** Devuelve filas como `{"id": 1, "nombre": "Avión"}` en lugar de tuplas `(1, "Avión")`. Mucho más legible y evita errores por cambios en el orden de columnas.
+
+**¿Por qué `yield` y no `return`?** `@contextmanager` convierte el generador en un gestor de contexto. El código antes del `yield` es el `__enter__`, el código después (en `finally`) es el `__exit__`.
+
+---
+
+### 35.2 Backend — Validaciones con Pydantic field_validator
+
+Se añaden validadores de campo en los modelos `ProductoNuevo` y `ProductoActualizar` para rechazar datos incorrectos antes de llegar a la base de datos:
+
+```python
+from pydantic import BaseModel, field_validator
+
+class ProductoNuevo(BaseModel):
+    precio: float
+    stock:  int = 0
+
+    @field_validator("precio")
+    @classmethod
+    def precio_positivo(cls, v):
+        if v < 0:
+            raise ValueError("El precio no puede ser negativo")
+        return round(v, 2)   # redondea siempre a 2 decimales
+
+    @field_validator("stock", "stock_minimo")
+    @classmethod
+    def stock_no_negativo(cls, v):
+        if v < 0:
+            raise ValueError("El stock no puede ser negativo")
+        return v
+```
+
+FastAPI captura automáticamente el `ValueError` y devuelve una respuesta 422 con el detalle del error.
+
+---
+
+### 35.3 Backend — Paginación en productos y pedidos
+
+Los endpoints `GET /productos` y `GET /pedidos` aceptan parámetros de paginación:
+
+```
+GET /productos?pagina=1&tamano=50
+GET /pedidos?pagina=2&tamano=20&estado=pendiente
+```
+
+```python
+@enrutador.get("/productos")
+def listar_productos(
+    categoria: int = None,
+    pagina: int = Query(default=1, ge=1),
+    tamano: int = Query(default=100, ge=1, le=500),
+):
+    offset = (pagina - 1) * tamano
+    # ... queries con LIMIT %s OFFSET %s
+    return {"productos": productos, "total": total, "pagina": pagina, "tamano": tamano}
+```
+
+La respuesta incluye siempre `total` para que el frontend pueda calcular el número de páginas.
+
+**¿Por qué `le=500` en `tamano`?** Evitar peticiones abusivas que pidan miles de filas a la vez.
+
+---
+
+### 35.4 Backend — Estado cancelado y restauración de stock
+
+Se añade `"cancelado"` al `Literal` de `EstadoPedido` y se implementa la lógica de restauración de stock cuando un pedido se cancela:
+
+```python
+class EstadoPedido(BaseModel):
+    estado: Literal["pendiente", "enviado", "entregado", "cancelado"]
+
+@enrutador.put("/pedidos/{id}/estado")
+def actualizar_estado_pedido(id: int, datos: EstadoPedido):
+    with obtener_cursor(dictionary=True) as (conexion, cursor):
+        cursor.execute("SELECT estado FROM pedidos WHERE id = %s", (id,))
+        pedido = cursor.fetchone()
+
+        # Al cancelar, devolver el stock de cada línea
+        if datos.estado == "cancelado" and pedido["estado"] != "cancelado":
+            cursor.execute(
+                "SELECT producto_id, cantidad FROM detalle_pedidos WHERE pedido_id = %s", (id,)
+            )
+            for linea in cursor.fetchall():
+                cursor.execute(
+                    "UPDATE productos SET stock = stock + %s WHERE id = %s",
+                    (linea["cantidad"], linea["producto_id"])
+                )
+
+        cursor.execute("UPDATE pedidos SET estado = %s WHERE id = %s", (datos.estado, id))
+```
+
+La condición `pedido["estado"] != "cancelado"` evita restaurar el stock dos veces si el pedido ya estaba cancelado.
+
+---
+
+### 35.5 Backend — SELECT FOR UPDATE: prevención de race conditions
+
+Cuando dos pedidos llegan al mismo tiempo para el mismo producto con poco stock, existe un *race condition*: ambos leen `stock = 1`, ambos pasan la validación, y ambos decrementan el stock, dejándolo en `-1`.
+
+La solución es bloquear la fila en la base de datos durante la transacción:
+
+```python
+cursor.execute(
+    "SELECT precio, stock FROM productos WHERE id = %s FOR UPDATE",
+    (linea.producto_id,)
+)
+```
+
+`FOR UPDATE` hace que MySQL bloquee la fila hasta que la transacción haga `COMMIT` o `ROLLBACK`. El segundo pedido esperará hasta que el primero termine, y entonces leerá el stock ya actualizado.
+
+**¿Cuándo usar `FOR UPDATE`?** Solo cuando necesitas garantizar que el valor que lees es el mismo que vas a modificar, y que nadie más puede modificarlo en el ínterin. No usarlo en consultas de solo lectura — sería innecesariamente restrictivo.
+
+---
+
+### 35.6 Frontend — Modal de confirmación en lugar de `confirm()`
+
+El `confirm()` nativo del navegador es síncrono, bloquea toda la pestaña, no se puede estilizar, y en algunos contextos (iframes, extensiones) está deshabilitado.
+
+**Solución en `app.js`:** función `confirmar(mensaje, accion)` que reutiliza el modal existente:
+
+```js
+let _confirmarCallback = null;
+
+function confirmar(mensaje, accion) {
+  _confirmarCallback = accion;
+  abrirModal('Confirmar', `
+    <p style="margin-bottom:24px">${escapeHtml(mensaje)}</p>
+    <div class="form-botones">
+      <button class="btn btn-secundario" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-peligro" onclick="_ejecutarConfirmacion()">Aceptar</button>
+    </div>
+  `);
+}
+
+function _ejecutarConfirmacion() {
+  cerrarModal();
+  if (_confirmarCallback) _confirmarCallback();
+  _confirmarCallback = null;
+}
+```
+
+**Uso:**
+```js
+// Antes
+if (!confirm('¿Eliminar?')) return;
+await borrarDatos(`/productos/${id}`);
+
+// Ahora
+confirmar('¿Seguro que quieres eliminar este producto?', async () => {
+  await borrarDatos(`/productos/${id}`);
+  mostrarToast('Producto eliminado');
+  cargarProductos();
+});
+```
+
+El callback se almacena en `_confirmarCallback` porque el modal cierra de forma asíncrona (clic en botón → event listener → función) y no podemos pasar la función directamente como atributo `onclick` sin `eval`.
+
+---
+
+### 35.7 Frontend — Formateo de fechas
+
+MySQL devuelve las fechas como cadenas en formato ISO: `"2024-01-15 10:30:00"`. En la UI se muestran en formato español `DD/MM/YYYY`.
+
+**En `app.js`:**
+```js
+function formatearFecha(fechaStr) {
+  if (!fechaStr) return '—';
+  const fecha = new Date(String(fechaStr).replace(' ', 'T'));
+  if (isNaN(fecha)) return fechaStr;
+  return fecha.toLocaleDateString('es-ES', {
+    day: '2-digit', month: '2-digit', year: 'numeric'
+  });
+}
+```
+
+El `.replace(' ', 'T')` es necesario porque `new Date("2024-01-15 10:30:00")` es inválido en algunos navegadores — el estándar ISO 8601 usa `T` como separador entre fecha y hora.
+
+Se usa en `pedidos.js` (tabla y modal de detalle) y `clientes.js` (historial de pedidos).
+
+---
+
+### 35.8 Frontend — Miniatura de imagen en tabla de productos
+
+Se añade una columna de imagen en la tabla de productos. Si el producto no tiene `imagen_url`, se muestra un recuadro gris como placeholder.
+
+**En `productos.js`:**
+```js
+const miniatura = producto.imagen_url
+  ? `<img src="${escapeHtml(producto.imagen_url)}" alt="" class="producto-thumb"
+          onerror="this.style.display='none'">`
+  : `<span class="producto-thumb-vacio"></span>`;
+```
+
+El `onerror="this.style.display='none'"` oculta la imagen si la URL falla (404, CORS, etc.) en lugar de mostrar el icono de imagen rota del navegador.
+
+**En `estilos.css`:**
+```css
+.producto-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  display: block;
+}
+.producto-thumb-vacio {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  background: #f3f4f6;
+  border-radius: 4px;
+}
+```
+
+`object-fit: cover` recorta la imagen para que llene el contenedor sin deformarse, igual que hace Instagram o Amazon con sus miniaturas.
+
+---
+
+### 35.9 Frontend — Estado cancelado y confirmación de cambio de estado
+
+**Badge CSS para `cancelado`:**
+```css
+.badge-cancelado { background: #f3f4f6; color: #6b7280; }
+```
+
+**Select con opción cancelado y confirmación:**
+
+```js
+// En la tabla de pedidos
+<select class="select-estado" data-anterior="${pedido.estado}"
+        onchange="confirmarCambioEstado(${pedido.id}, this)">
+  <option value="pendiente"  ...>Pendiente</option>
+  <option value="enviado"    ...>Enviado</option>
+  <option value="entregado"  ...>Entregado</option>
+  <option value="cancelado"  ...>Cancelado</option>
+</select>
+```
+
+```js
+function confirmarCambioEstado(id, select) {
+  const nuevoEstado = select.value;
+  const estadoAnterior = select.dataset.anterior;
+  // Revertir visualmente mientras el usuario decide en el modal
+  select.value = estadoAnterior;
+  confirmar(`¿Cambiar el estado a "${nuevoEstado}"?`, () => cambiarEstado(id, nuevoEstado));
+}
+```
+
+`data-anterior` guarda el estado actual del pedido en el DOM. Cuando el usuario cambia el select, se revierte inmediatamente y se muestra el modal. Si confirma, `cambiarEstado()` llama al backend y recarga la tabla con el nuevo estado.
+
+---
+
+### 35.10 Frontend — Respuesta paginada en productos y pedidos
+
+Al añadir paginación en el backend, la respuesta de `GET /productos` y `GET /pedidos` cambia de array a objeto:
+
+```json
+// Antes
+[{ "id": 1, ... }, ...]
+
+// Ahora
+{
+  "productos": [{ "id": 1, ... }],
+  "total": 42,
+  "pagina": 1,
+  "tamano": 100
+}
+```
+
+El frontend se actualiza para extraer el array correctamente:
+
+```js
+// productos.js
+const respuesta = await obtenerDatos('/productos');
+_productos = respuesta.productos;
+
+// pedidos.js
+const respuesta = await obtenerDatos('/pedidos');
+_pedidos = respuesta.pedidos;
+```
+
+También en todos los lugares donde se recargaban los productos tras crear/editar un pedido:
+```js
+const resp = await obtenerDatos('/productos');
+_productos = resp.productos;
+actualizarBadgeStock(_productos.filter(p => p.stock <= p.stock_minimo).length);
+```

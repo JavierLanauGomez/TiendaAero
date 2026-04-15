@@ -10,7 +10,9 @@ var _productos = [];
 async function cargarProductos() {
   mostrarMensaje('tabla-productos', 'Cargando...');
   try {
-    _productos = await obtenerDatos('/productos');
+    // El backend devuelve { productos: [...], total: N, pagina: 1, tamano: 100 }
+    const respuesta = await obtenerDatos('/productos');
+    _productos = respuesta.productos;
 
     if (_productos.length === 0) {
       mostrarMensaje('tabla-productos', 'No hay productos todavia.');
@@ -21,6 +23,7 @@ async function cargarProductos() {
       <table class="tabla">
         <thead>
           <tr>
+            <th></th>
             <th>ID</th>
             <th>Nombre</th>
             <th>Marca</th>
@@ -36,11 +39,18 @@ async function cargarProductos() {
               ? `<span class="badge badge-stock-bajo">${producto.stock} (bajo)</span>`
               : `<span class="badge badge-stock-ok">${producto.stock}</span>`;
 
+            // Miniatura de imagen o placeholder
+            const miniatura = producto.imagen_url
+              ? `<img src="${escapeHtml(producto.imagen_url)}" alt="" class="producto-thumb"
+                      onerror="this.style.display='none'">`
+              : `<span class="producto-thumb-vacio"></span>`;
+
             return `
               <tr>
+                <td>${miniatura}</td>
                 <td>${producto.id}</td>
-                <td>${producto.nombre}</td>
-                <td>${producto.marca || '—'}</td>
+                <td>${escapeHtml(producto.nombre)}</td>
+                <td>${escapeHtml(producto.marca) || '—'}</td>
                 <td>${Number(producto.precio).toFixed(2)} €</td>
                 <td>${etiquetaStock}</td>
                 <td class="acciones">
@@ -169,16 +179,16 @@ async function guardarProducto(evento, id) {
 }
 
 // ----------------------------------------------------------
-// ELIMINAR
+// ELIMINAR (usa modal de confirmacion en lugar de confirm())
 // ----------------------------------------------------------
 async function eliminarProducto(id) {
-  if (!confirm('¿Seguro que quieres eliminar este producto?')) return;
-
-  try {
-    await borrarDatos(`/productos/${id}`);
-    mostrarToast('Producto eliminado');
-    cargarProductos();
-  } catch (error) {
-    mostrarToast(error.message, 'error');
-  }
+  confirmar('¿Seguro que quieres eliminar este producto?', async () => {
+    try {
+      await borrarDatos(`/productos/${id}`);
+      mostrarToast('Producto eliminado');
+      cargarProductos();
+    } catch (error) {
+      mostrarToast(error.message, 'error');
+    }
+  });
 }

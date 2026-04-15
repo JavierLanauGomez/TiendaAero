@@ -116,13 +116,13 @@ async function guardarCategoria(evento, id) {
 // ELIMINAR
 // ----------------------------------------------------------
 async function eliminarCategoria(id) {
-  if (!confirm('¿Seguro que quieres eliminar esta categoria?')) return;
-
-  try {
-    await borrarDatos(`/categorias/${id}`);
-    mostrarToast('Categoria eliminada');
-    cargarCategorias();
-  } catch (error) {
-    mostrarToast(error.message, 'error');
-  }
+  confirmar('¿Seguro que quieres eliminar esta categoria?', async () => {
+    try {
+      await borrarDatos(`/categorias/${id}`);
+      mostrarToast('Categoria eliminada');
+      cargarCategorias();
+    } catch (error) {
+      mostrarToast(error.message, 'error');
+    }
+  });
 }

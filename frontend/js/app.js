@@ -127,6 +127,40 @@ function mostrarMensaje(idContenedor, texto, esError = false) {
 }
 
 // ----------------------------------------------------------
+// FORMATEAR FECHA
+// Convierte "2024-01-15 10:30:00" (MySQL) en "15/01/2024".
+// ----------------------------------------------------------
+function formatearFecha(fechaStr) {
+  if (!fechaStr) return '—';
+  const fecha = new Date(String(fechaStr).replace(' ', 'T'));
+  if (isNaN(fecha)) return fechaStr;
+  return fecha.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+// ----------------------------------------------------------
+// CONFIRMAR (modal en lugar del confirm() nativo)
+// Uso: confirmar('¿Eliminar este producto?', () => eliminar(id))
+// ----------------------------------------------------------
+let _confirmarCallback = null;
+
+function confirmar(mensaje, accion) {
+  _confirmarCallback = accion;
+  abrirModal('Confirmar', `
+    <p style="margin-bottom:24px">${escapeHtml(mensaje)}</p>
+    <div class="form-botones">
+      <button class="btn btn-secundario" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-peligro" onclick="_ejecutarConfirmacion()">Aceptar</button>
+    </div>
+  `);
+}
+
+function _ejecutarConfirmacion() {
+  cerrarModal();
+  if (_confirmarCallback) _confirmarCallback();
+  _confirmarCallback = null;
+}
+
+// ----------------------------------------------------------
 // INICIO DE LA APLICACION
 // ----------------------------------------------------------
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from database import obtener_conexion
+from database import obtener_cursor
 
 enrutador = APIRouter()
 
@@ -17,23 +17,16 @@ class CategoriaActualizar(BaseModel):
 
 @enrutador.get("/categorias")
 def listar_categorias():
-    conexion = obtener_conexion()
-    cursor = conexion.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM categorias")
-    categorias = cursor.fetchall()
-    cursor.close()
-    conexion.close()
-    return categorias
+    with obtener_cursor(dictionary=True) as (_, cursor):
+        cursor.execute("SELECT * FROM categorias")
+        return cursor.fetchall()
 
 
 @enrutador.get("/categorias/{id}")
 def obtener_categoria(id: int):
-    conexion = obtener_conexion()
-    cursor = conexion.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM categorias WHERE id = %s", (id,))
-    categoria = cursor.fetchone()
-    cursor.close()
-    conexion.close()
+    with obtener_cursor(dictionary=True) as (_, cursor):
+        cursor.execute("SELECT * FROM categorias WHERE id = %s", (id,))
+        categoria = cursor.fetchone()
     if categoria is None:
         raise HTTPException(status_code=404, detail="Categoria no encontrada")
     return categoria
@@ -41,16 +34,12 @@ def obtener_categoria(id: int):
 
 @enrutador.post("/categorias", status_code=201)
 def crear_categoria(categoria: CategoriaNueva):
-    conexion = obtener_conexion()
-    cursor = conexion.cursor()
-    cursor.execute(
-        "INSERT INTO categorias (nombre, descripcion) VALUES (%s, %s)",
-        (categoria.nombre, categoria.descripcion)
-    )
-    conexion.commit()
-    nuevo_id = cursor.lastrowid
-    cursor.close()
-    conexion.close()
+    with obtener_cursor() as (_, cursor):
+        cursor.execute(
+            "INSERT INTO categorias (nombre, descripcion) VALUES (%s, %s)",
+            (categoria.nombre, categoria.descripcion)
+        )
+        nuevo_id = cursor.lastrowid
     return {"id": nuevo_id, "mensaje": "Categoria creada"}
 
 
@@ -61,13 +50,9 @@ def actualizar_categoria(id: int, datos: CategoriaActualizar):
         raise HTTPException(status_code=400, detail="No se enviaron campos para actualizar")
     sentencia = "UPDATE categorias SET " + ", ".join(f"{k} = %s" for k in campos) + " WHERE id = %s"
     valores = list(campos.values()) + [id]
-    conexion = obtener_conexion()
-    cursor = conexion.cursor()
-    cursor.execute(sentencia, valores)
-    conexion.commit()
-    filas_afectadas = cursor.rowcount
-    cursor.close()
-    conexion.close()
+    with obtener_cursor() as (_, cursor):
+        cursor.execute(sentencia, valores)
+        filas_afectadas = cursor.rowcount
     if filas_afectadas == 0:
         raise HTTPException(status_code=404, detail="Categoria no encontrada")
     return {"mensaje": "Categoria actualizada"}
@@ -75,13 +60,9 @@ def actualizar_categoria(id: int, datos: CategoriaActualizar):
 
 @enrutador.delete("/categorias/{id}")
 def eliminar_categoria(id: int):
-    conexion = obtener_conexion()
-    cursor = conexion.cursor()
-    cursor.execute("DELETE FROM categorias WHERE id = %s", (id,))
-    conexion.commit()
-    filas_afectadas = cursor.rowcount
-    cursor.close()
-    conexion.close()
+    with obtener_cursor() as (_, cursor):
+        cursor.execute("DELETE FROM categorias WHERE id = %s", (id,))
+        filas_afectadas = cursor.rowcount
     if filas_afectadas == 0:
         raise HTTPException(status_code=404, detail="Categoria no encontrada")
     return {"mensaje": "Categoria eliminada"}

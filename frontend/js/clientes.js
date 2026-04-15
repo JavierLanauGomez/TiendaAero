@@ -73,7 +73,7 @@ async function verHistorialCliente(id) {
       : pedidos.map(p => `
           <tr>
             <td>#${p.id}</td>
-            <td>${p.fecha}</td>
+            <td>${formatearFecha(p.fecha)}</td>
             <td>${Number(p.total).toFixed(2)} €</td>
             <td><span class="badge badge-${p.estado}">${p.estado}</span></td>
           </tr>
@@ -169,13 +169,13 @@ async function guardarCliente(evento, id) {
 // ELIMINAR
 // ----------------------------------------------------------
 async function eliminarCliente(id) {
-  if (!confirm('¿Seguro que quieres eliminar este cliente?')) return;
-
-  try {
-    await borrarDatos(`/clientes/${id}`);
-    mostrarToast('Cliente eliminado');
-    cargarClientes();
-  } catch (error) {
-    mostrarToast(error.message, 'error');
-  }
+  confirmar('¿Seguro que quieres eliminar este cliente?', async () => {
+    try {
+      await borrarDatos(`/clientes/${id}`);
+      mostrarToast('Cliente eliminado');
+      cargarClientes();
+    } catch (error) {
+      mostrarToast(error.message, 'error');
+    }
+  });
 }

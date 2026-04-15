@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from database import obtener_conexion
+from database import obtener_cursor
 
 enrutador = APIRouter()
 
@@ -21,23 +21,16 @@ class ClienteActualizar(BaseModel):
 
 @enrutador.get("/clientes")
 def listar_clientes():
-    conexion = obtener_conexion()
-    cursor = conexion.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM clientes")
-    clientes = cursor.fetchall()
-    cursor.close()
-    conexion.close()
-    return clientes
+    with obtener_cursor(dictionary=True) as (_, cursor):
+        cursor.execute("SELECT * FROM clientes")
+        return cursor.fetchall()
 
 
 @enrutador.get("/clientes/{id}")
 def obtener_cliente(id: int):
-    conexion = obtener_conexion()
-    cursor = conexion.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM clientes WHERE id = %s", (id,))
-    cliente = cursor.fetchone()
-    cursor.close()
-    conexion.close()
+    with obtener_cursor(dictionary=True) as (_, cursor):
+        cursor.execute("SELECT * FROM clientes WHERE id = %s", (id,))
+        cliente = cursor.fetchone()
     if cliente is None:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     return cliente
@@ -45,16 +38,12 @@ def obtener_cliente(id: int):
 
 @enrutador.post("/clientes", status_code=201)
 def crear_cliente(cliente: ClienteNuevo):
-    conexion = obtener_conexion()
-    cursor = conexion.cursor()
-    cursor.execute(
-        "INSERT INTO clientes (nombre, email, telefono, direccion) VALUES (%s, %s, %s, %s)",
-        (cliente.nombre, cliente.email, cliente.telefono, cliente.direccion)
-    )
-    conexion.commit()
-    nuevo_id = cursor.lastrowid
-    cursor.close()
-    conexion.close()
+    with obtener_cursor() as (_, cursor):
+        cursor.execute(
+            "INSERT INTO clientes (nombre, email, telefono, direccion) VALUES (%s, %s, %s, %s)",
+            (cliente.nombre, cliente.email, cliente.telefono, cliente.direccion)
+        )
+        nuevo_id = cursor.lastrowid
     return {"id": nuevo_id, "mensaje": "Cliente creado"}
 
 
@@ -65,13 +54,9 @@ def actualizar_cliente(id: int, datos: ClienteActualizar):
         raise HTTPException(status_code=400, detail="No se enviaron campos para actualizar")
     sentencia = "UPDATE clientes SET " + ", ".join(f"{k} = %s" for k in campos) + " WHERE id = %s"
     valores = list(campos.values()) + [id]
-    conexion = obtener_conexion()
-    cursor = conexion.cursor()
-    cursor.execute(sentencia, valores)
-    conexion.commit()
-    filas_afectadas = cursor.rowcount
-    cursor.close()
-    conexion.close()
+    with obtener_cursor() as (_, cursor):
+        cursor.execute(sentencia, valores)
+        filas_afectadas = cursor.rowcount
     if filas_afectadas == 0:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     return {"mensaje": "Cliente actualizado"}
@@ -79,37 +64,22 @@ def actualizar_cliente(id: int, datos: ClienteActualizar):
 
 @enrutador.get("/clientes/{id}/pedidos")
 def pedidos_de_cliente(id: int):
-    """
-    Devuelve todos los pedidos de un cliente concreto ordenados
-    del mas reciente al mas antiguo.
-    Primero verifica que el cliente existe (404 si no).
-    """
-    conexion = obtener_conexion()
-    cursor = conexion.cursor(dictionary=True)
-    cursor.execute("SELECT id FROM clientes WHERE id = %s", (id,))
-    if cursor.fetchone() is None:
-        cursor.close()
-        conexion.close()
-        raise HTTPException(status_code=404, detail="Cliente no encontrado")
-    cursor.execute(
-        "SELECT * FROM pedidos WHERE cliente_id = %s ORDER BY fecha DESC, id DESC",
-        (id,)
-    )
-    pedidos = cursor.fetchall()
-    cursor.close()
-    conexion.close()
-    return pedidos
+    with obtener_cursor(dictionary=True) as (_, cursor):
+        cursor.execute("SELECT id FROM clientes WHERE id = %s", (id,))
+        if cursor.fetchone() is None:
+            raise HTTPException(status_code=404, detail="Cliente no encontrado")
+        cursor.execute(
+            "SELECT * FROM pedidos WHERE cliente_id = %s ORDER BY fecha DESC, id DESC",
+            (id,)
+        )
+        return cursor.fetchall()
 
 
 @enrutador.delete("/clientes/{id}")
 def eliminar_cliente(id: int):
-    conexion = obtener_conexion()
-    cursor = conexion.cursor()
-    cursor.execute("DELETE FROM clientes WHERE id = %s", (id,))
-    conexion.commit()
-    filas_afectadas = cursor.rowcount
-    cursor.close()
-    conexion.close()
+    with obtener_cursor() as (_, cursor):
+        cursor.execute("DELETE FROM clientes WHERE id = %s", (id,))
+        filas_afectadas = cursor.rowcount
     if filas_afectadas == 0:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     return {"mensaje": "Cliente eliminado"}
