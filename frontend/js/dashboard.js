@@ -147,7 +147,7 @@ function renderizarDashboard(datos) {
     <div class="kpi-hero">
       <div class="kpi-hero-izquierda">
         <div class="kpi-hero-titulo">
-          <span class="kpi-hero-icono">💰</span>
+          <span class="kpi-hero-icono"><i data-lucide="wallet"></i></span>
           Caja del día — ${new Date().toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long'})}
         </div>
         <div class="kpi-hero-valor">${Number(datos.ventas_hoy).toFixed(2)} €</div>
@@ -171,7 +171,7 @@ function renderizarDashboard(datos) {
 
       <!-- Ventas de hoy vs. ayer -->
       <div class="kpi-metrica" style="border-top-color:#3b82f6;">
-        <div class="kpi-metrica-icono" style="background:#eff6ff;color:#2563eb;">📅</div>
+        <div class="kpi-metrica-icono" style="background:#eff6ff;color:#2563eb;"><i data-lucide="calendar"></i></div>
         <div class="kpi-metrica-valor">${Number(datos.ventas_hoy).toFixed(2)} €</div>
         <div class="kpi-metrica-titulo">Ventas hoy</div>
         ${tHoy}
@@ -179,7 +179,7 @@ function renderizarDashboard(datos) {
 
       <!-- Ventas de la semana vs. semana anterior -->
       <div class="kpi-metrica" style="border-top-color:#8b5cf6;">
-        <div class="kpi-metrica-icono" style="background:#f5f3ff;color:#7c3aed;">📆</div>
+        <div class="kpi-metrica-icono" style="background:#f5f3ff;color:#7c3aed;"><i data-lucide="calendar-range"></i></div>
         <div class="kpi-metrica-valor">${Number(datos.ventas_semana).toFixed(2)} €</div>
         <div class="kpi-metrica-titulo">Ventas esta semana</div>
         ${tSemana}
@@ -187,7 +187,7 @@ function renderizarDashboard(datos) {
 
       <!-- Ventas del mes vs. mes anterior -->
       <div class="kpi-metrica" style="border-top-color:#f59e0b;">
-        <div class="kpi-metrica-icono" style="background:#fffbeb;color:#d97706;">🗓️</div>
+        <div class="kpi-metrica-icono" style="background:#fffbeb;color:#d97706;"><i data-lucide="calendar-check-2"></i></div>
         <div class="kpi-metrica-valor">${Number(datos.ventas_mes_actual).toFixed(2)} €</div>
         <div class="kpi-metrica-titulo">Ventas este mes</div>
         ${tMes}
@@ -195,7 +195,7 @@ function renderizarDashboard(datos) {
 
       <!-- Ticket medio del día: importe promedio por pedido -->
       <div class="kpi-metrica" style="border-top-color:#10b981;">
-        <div class="kpi-metrica-icono" style="background:#ecfdf5;color:#059669;">🧾</div>
+        <div class="kpi-metrica-icono" style="background:#ecfdf5;color:#059669;"><i data-lucide="receipt"></i></div>
         <div class="kpi-metrica-valor">${Number(datos.ticket_medio_hoy).toFixed(2)} €</div>
         <div class="kpi-metrica-titulo">Ticket medio hoy</div>
         ${tTicket}
@@ -204,7 +204,7 @@ function renderizarDashboard(datos) {
 
       <!-- Pedidos del día: número de transacciones registradas -->
       <div class="kpi-metrica" style="border-top-color:#ef4444;">
-        <div class="kpi-metrica-icono" style="background:#fef2f2;color:#dc2626;">🛒</div>
+        <div class="kpi-metrica-icono" style="background:#fef2f2;color:#dc2626;"><i data-lucide="shopping-cart"></i></div>
         <div class="kpi-metrica-valor">${datos.pedidos_hoy}</div>
         <div class="kpi-metrica-titulo">Pedidos hoy</div>
         ${tPedidos}
@@ -221,13 +221,13 @@ function renderizarDashboard(datos) {
 
       <!-- Top 5 productos: nombre, barra relativa, unidades e importe -->
       <div class="panel-card">
-        <h2 class="panel-titulo"><span>🏆</span> Top 5 productos más vendidos</h2>
+        <h2 class="panel-titulo"><span><i data-lucide="trophy"></i></span> Top 5 productos más vendidos</h2>
         <div class="top-productos-lista">${listaTop}</div>
       </div>
 
       <!-- Gráfica de evolución de ventas de los últimos 6 meses -->
       <div class="panel-card">
-        <h2 class="panel-titulo"><span>📊</span> Ventas últimos 6 meses</h2>
+        <h2 class="panel-titulo"><span><i data-lucide="bar-chart-2"></i></span> Ventas últimos 6 meses</h2>
         <canvas id="grafica-ventas" height="200"></canvas>
       </div>
 
@@ -238,7 +238,7 @@ function renderizarDashboard(datos) {
     ═══════════════════════════════════════════════════════════════════ -->
     <div class="panel-card">
       <h2 class="panel-titulo">
-        <span>⚠️</span> Productos con stock bajo
+        <span><i data-lucide="alert-triangle"></i></span> Productos con stock bajo
         ${numStockBajo > 0 ? `<span class="panel-badge-alerta">${numStockBajo}</span>` : ''}
       </h2>
       <table class="tabla">
@@ -251,6 +251,7 @@ function renderizarDashboard(datos) {
   `;
 
   _dibujarGrafica(datos.ventas_por_mes);
+  if (window.lucide) lucide.createIcons();
 }
 
 // ----------------------------------------------------------

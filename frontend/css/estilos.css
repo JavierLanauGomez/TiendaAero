@@ -1083,3 +1083,105 @@ body {
   .inicio-accesos { grid-template-columns: 1fr 1fr; }
   .inicio-hero-icono { font-size: 40px; }
 }
+
+/* ============================================================
+   LUCIDE ICONS — ajustes de tamaño y alineación para SVG
+   ============================================================ */
+
+/* Icono genérico: hereda color del contenedor */
+[data-lucide], svg.lucide {
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* Sidebar: nav links como flex para alinear icono + texto */
+.nav-enlace {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-enlace [data-lucide] {
+  width: 18px;
+  height: 18px;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+
+.nav-enlace:hover [data-lucide],
+.nav-enlace.activo [data-lucide] {
+  opacity: 1;
+}
+
+/* Botón cerrar sesión */
+.btn-logout {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-logout [data-lucide] {
+  width: 16px;
+  height: 16px;
+}
+
+/* Logo sidebar y login */
+.logo [data-lucide],
+.login-logo [data-lucide] {
+  width: 22px;
+  height: 22px;
+  vertical-align: middle;
+}
+
+/* Hero icono grande en sección inicio */
+.inicio-hero-icono {
+  font-size: 56px;
+  line-height: 1;
+}
+
+.inicio-hero-icono [data-lucide] {
+  width: 64px;
+  height: 64px;
+  color: rgba(255,255,255,0.9);
+}
+
+/* Cards de acceso rápido en inicio */
+.inicio-card-icono [data-lucide] {
+  width: 40px;
+  height: 40px;
+  color: var(--color-primario);
+}
+
+/* Tags de inicio */
+.inicio-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inicio-tag [data-lucide] {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+/* KPI metrica icono en dashboard */
+.kpi-metrica-icono [data-lucide] {
+  width: 20px;
+  height: 20px;
+}
+
+/* KPI hero icono (caja del día) */
+.kpi-hero-icono [data-lucide] {
+  width: 22px;
+  height: 22px;
+  vertical-align: middle;
+}
+
+/* Títulos de panel (top productos, gráfica, stock bajo) */
+.panel-titulo [data-lucide] {
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+}

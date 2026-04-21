@@ -3410,3 +3410,430 @@ const resp = await obtenerDatos('/productos');
 _productos = resp.productos;
 actualizarBadgeStock(_productos.filter(p => p.stock <= p.stock_minimo).length);
 ```
+
+---
+
+## Mejoras visuales y de dinamismo (roadmap)
+
+Lista de mejoras visuales identificadas para hacer la interfaz más dinámica y atractiva, ordenadas por impacto y esfuerzo.
+
+### 1. Iconos profesionales — reemplazar emojis por Lucide Icons
+
+**Qué hacer:** Sustituir todos los emojis del sidebar, KPIs y secciones por SVG de [Lucide Icons](https://lucide.dev) (sin dependencia pesada, ~2 KB por icono inline).
+
+**Por qué:** Los emojis varían entre sistemas operativos y dan aspecto amateur. Los SVG son consistentes, escalables y permiten cambiar color con CSS.
+
+**Cómo aplicarlo:**
+```html
+<!-- Antes -->
+<span>💰 Caja diaria</span>
+
+<!-- Después -->
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+     fill="none" stroke="currentColor" stroke-width="2" class="icono">
+  <line x1="12" y1="1" x2="12" y2="23"></line>
+  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+</svg>
+<span>Caja diaria</span>
+```
+
+**Archivos a modificar:** `index.html` (sidebar + secciones), `dashboard.js` (KPI icons), `css/estilos.css` (añadir `.icono { vertical-align: middle; margin-right: 6px; }`).
+
+---
+
+### 2. Contadores animados en KPIs del dashboard
+
+**Qué hacer:** Los números del dashboard (ventas, pedidos, ticket medio) arrancan en 0 y suben hasta el valor real en ~800ms al cargar.
+
+**Por qué:** El efecto "count-up" atrae la vista e indica que el dato es dinámico y en tiempo real.
+
+**Cómo aplicarlo en `dashboard.js`:**
+```js
+function animarContador(elemento, valorFinal, esDinero = false) {
+    const duracion = 800;
+    const pasos = 40;
+    const incremento = valorFinal / pasos;
+    let valorActual = 0;
+    let paso = 0;
+
+    const intervalo = setInterval(() => {
+        paso++;
+        valorActual = Math.min(valorActual + incremento, valorFinal);
+        elemento.textContent = esDinero
+            ? valorActual.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+            : Math.round(valorActual).toLocaleString('es-ES');
+
+        if (paso >= pasos) clearInterval(intervalo);
+    }, duracion / pasos);
+}
+
+// Uso al cargar el dashboard:
+animarContador(document.getElementById('kpi-caja-valor'), datos.hoy.ventas, true);
+animarContador(document.getElementById('kpi-pedidos-hoy'), datos.hoy.pedidos);
+```
+
+---
+
+### 3. Vista galería de productos (toggle Tabla/Galería)
+
+**Qué hacer:** Añadir botón toggle en la cabecera de la sección Productos para cambiar entre vista de tabla (actual) y vista de cards con imagen grande.
+
+**Por qué:** Mejora la experiencia visual cuando los productos tienen imágenes. Muy común en e-commerce y dashboards modernos.
+
+**HTML a añadir en `index.html`:**
+```html
+<div class="vista-toggle">
+    <button id="btn-vista-tabla" class="btn-vista activo" title="Vista tabla">
+        <!-- icono tabla SVG -->
+    </button>
+    <button id="btn-vista-galeria" class="btn-vista" title="Vista galería">
+        <!-- icono grid SVG -->
+    </button>
+</div>
+```
+
+**CSS para las cards de galería:**
+```css
+.galeria-productos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.producto-card {
+    background: var(--blanco);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.producto-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.producto-card img {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+}
+
+.producto-card-body {
+    padding: 12px;
+}
+```
+
+---
+
+### 4. Skeleton loading (pantallas de carga animadas)
+
+**Qué hacer:** Mientras la API responde, mostrar filas grises con efecto shimmer en lugar de la tabla vacía.
+
+**Por qué:** Elimina el "parpadeo" de contenido y da sensación de velocidad. Estándar en apps modernas (Facebook, LinkedIn, etc.).
+
+**CSS a añadir:**
+```css
+@keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 4px;
+    height: 16px;
+}
+```
+
+**JS — función reutilizable en `app.js`:**
+```js
+function mostrarSkeletonTabla(tbodyId, columnas = 5, filas = 6) {
+    const tbody = document.getElementById(tbodyId);
+    tbody.innerHTML = Array.from({ length: filas }, () =>
+        `<tr>${Array.from({ length: columnas }, () =>
+            `<td><div class="skeleton"></div></td>`
+        ).join('')}</tr>`
+    ).join('');
+}
+
+// Uso en cada módulo antes del fetch:
+mostrarSkeletonTabla('tbody-productos', 7);
+const productos = await obtenerDatos('/productos');
+// ... renderizar productos reales
+```
+
+---
+
+### 5. Lightbox para imágenes de productos
+
+**Qué hacer:** Al hacer clic en la miniatura de un producto en la tabla, abrir la imagen a pantalla completa con fondo oscuro. Clic fuera o ESC cierra.
+
+**Por qué:** Permite ver el producto con detalle sin salir de la página.
+
+**HTML a añadir en `index.html`:**
+```html
+<div id="lightbox" class="lightbox" style="display:none">
+    <div class="lightbox-overlay"></div>
+    <img id="lightbox-img" src="" alt="Imagen producto">
+</div>
+```
+
+**CSS:**
+```css
+.lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lightbox-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+}
+
+#lightbox-img {
+    position: relative;
+    max-width: 80vw;
+    max-height: 80vh;
+    border-radius: 8px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    object-fit: contain;
+    animation: slideIn 0.2s ease;
+}
+```
+
+**JS a añadir en `app.js`:**
+```js
+function abrirLightbox(url) {
+    const lb = document.getElementById('lightbox');
+    document.getElementById('lightbox-img').src = url;
+    lb.style.display = 'flex';
+}
+
+function cerrarLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
+}
+
+document.getElementById('lightbox').addEventListener('click', cerrarLightbox);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarLightbox(); });
+```
+
+**En `productos.js`, al renderizar la miniatura:**
+```js
+// Antes: <img src="${p.imagen_url}" ...>
+// Después:
+`<img src="${escapeHtml(p.imagen_url)}" class="producto-thumb" 
+      style="cursor:pointer" 
+      onclick="abrirLightbox('${escapeHtml(p.imagen_url)}')">`
+```
+
+---
+
+### 6. Animaciones de entrada por sección
+
+**Qué hacer:** Al navegar a una sección, las filas de la tabla aparecen con un `fadeInUp` escalonado (cada fila 40ms después).
+
+**Por qué:** Da sensación de fluidez y hace la app sentirse más viva.
+
+**CSS a añadir:**
+```css
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.fila-animada {
+    animation: fadeInUp 0.3s ease both;
+}
+```
+
+**JS — aplicar al renderizar filas:**
+```js
+// En productos.js, clientes.js, pedidos.js:
+filas.forEach((fila, i) => {
+    fila.classList.add('fila-animada');
+    fila.style.animationDelay = `${i * 40}ms`;
+    tbody.appendChild(fila);
+});
+```
+
+---
+
+### 7. Previsualización de imagen en el modal de producto
+
+**Qué hacer:** En el modal de crear/editar producto, cuando el usuario pega una URL en el campo imagen, mostrar inmediatamente una previsualización debajo del input.
+
+**Por qué:** El usuario sabe al instante si la URL es válida antes de guardar.
+
+**HTML a añadir en el modal de producto:**
+```html
+<div id="preview-imagen" style="display:none; margin-top: 8px;">
+    <img id="img-preview" src="" alt="Preview"
+         style="width:80px; height:80px; object-fit:cover; border-radius:6px; border:1px solid var(--borde);">
+</div>
+```
+
+**JS en `productos.js`:**
+```js
+document.getElementById('prod-imagen').addEventListener('input', function() {
+    const preview = document.getElementById('preview-imagen');
+    const img = document.getElementById('img-preview');
+    if (this.value) {
+        img.src = this.value;
+        img.onload = () => preview.style.display = 'block';
+        img.onerror = () => preview.style.display = 'none';
+    } else {
+        preview.style.display = 'none';
+    }
+});
+```
+
+---
+
+### 8. Segunda gráfica en dashboard — Pedidos por estado (donut)
+
+**Qué hacer:** Añadir junto a la gráfica de barras mensual un gráfico tipo donut que muestre la distribución de pedidos: pendiente / enviado / entregado / cancelado.
+
+**Por qué:** Información visual rápida del estado operativo de la tienda.
+
+**Backend — nuevo endpoint en `routers/dashboard.py`:**
+```python
+@router.get("/pedidos-por-estado")
+def pedidos_por_estado(usuario=Depends(obtener_usuario_actual)):
+    with obtener_cursor(dictionary=True) as (_, cursor):
+        cursor.execute("""
+            SELECT estado, COUNT(*) as total
+            FROM pedidos
+            GROUP BY estado
+        """)
+        return cursor.fetchall()
+```
+
+**JS en `dashboard.js`:**
+```js
+const datosEstados = await obtenerDatos('/dashboard/pedidos-por-estado');
+const colores = {
+    pendiente: '#fbbf24',
+    enviado:   '#3b82f6',
+    entregado: '#22c55e',
+    cancelado: '#9ca3af'
+};
+
+new Chart(document.getElementById('grafica-estados'), {
+    type: 'doughnut',
+    data: {
+        labels: datosEstados.map(d => d.estado),
+        datasets: [{
+            data: datosEstados.map(d => d.total),
+            backgroundColor: datosEstados.map(d => colores[d.estado])
+        }]
+    },
+    options: { plugins: { legend: { position: 'bottom' } } }
+});
+```
+
+---
+
+### 9. Sidebar colapsable
+
+**Qué hacer:** Añadir botón para reducir el sidebar a 60px (solo iconos) y expandirlo con animación suave.
+
+**Por qué:** Gana espacio de trabajo en pantallas pequeñas. Estándar en dashboards profesionales.
+
+**CSS a añadir:**
+```css
+.sidebar {
+    transition: width 0.25s ease;
+    overflow: hidden;
+}
+
+.sidebar.colapsado {
+    width: 60px;
+}
+
+.sidebar.colapsado .nav-texto,
+.sidebar.colapsado .logo-texto,
+.sidebar.colapsado .btn-logout span {
+    display: none;
+}
+
+.sidebar.colapsado .nav-link {
+    justify-content: center;
+    padding: 12px;
+}
+
+.btn-colapsar {
+    position: absolute;
+    top: 16px;
+    right: -12px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--color-primario);
+    border: none;
+    cursor: pointer;
+    color: white;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+```
+
+---
+
+### 10. Dark mode
+
+**Qué hacer:** Toggle en la cabecera que aplica la clase `.dark` al `<body>` y cambia todas las variables CSS a tonos oscuros.
+
+**Por qué:** Reduce fatiga visual en uso prolongado. Esperado en apps modernas.
+
+**CSS a añadir (sobreescribe variables en modo oscuro):**
+```css
+body.dark {
+    --fondo:         #0f172a;
+    --blanco:        #1e293b;
+    --borde:         #334155;
+    --texto:         #f1f5f9;
+    --texto-suave:   #94a3b8;
+    --sidebar-fondo: #0f172a;
+}
+```
+
+**JS — guardar preferencia en localStorage:**
+```js
+const btnDark = document.getElementById('btn-dark-mode');
+btnDark.addEventListener('click', () => {
+    document.body.classList.toggle('dark');
+    localStorage.setItem('dark', document.body.classList.contains('dark'));
+});
+
+// Restaurar al cargar:
+if (localStorage.getItem('dark') === 'true') {
+    document.body.classList.add('dark');
+}
+```
+
+---
+
+### Resumen de prioridades
+
+| Prioridad | Mejora | Esfuerzo estimado |
+|-----------|--------|-------------------|
+| ⭐⭐⭐⭐⭐ | Contadores animados en KPIs | 1–2 horas |
+| ⭐⭐⭐⭐⭐ | Vista galería de productos | 3–4 horas |
+| ⭐⭐⭐⭐ | Lucide Icons (reemplazar emojis) | 2–3 horas |
+| ⭐⭐⭐⭐ | Skeleton loading | 2 horas |
+| ⭐⭐⭐⭐ | Lightbox de imágenes | 1–2 horas |
+| ⭐⭐⭐⭐ | Previsualización imagen en modal | 30 minutos |
+| ⭐⭐⭐ | Animaciones de entrada por sección | 1 hora |
+| ⭐⭐⭐ | Gráfica donut pedidos por estado | 2 horas |
+| ⭐⭐⭐ | Sidebar colapsable | 2–3 horas |
+| ⭐⭐ | Dark mode | 3–4 horas |
