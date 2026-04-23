@@ -153,6 +153,37 @@ function renderizarDashboard(datos) {
         <div class="kpi-hero-valor">${Number(datos.ventas_hoy).toFixed(2)} €</div>
         <div class="kpi-hero-meta">${tHoy}</div>
       </div>
+      <div class="kpi-hero-dron" aria-hidden="true">
+        <svg viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="95" y1="95" x2="42" y2="42" stroke="rgba(255,255,255,0.55)" stroke-width="3" stroke-linecap="round"/>
+          <line x1="125" y1="95" x2="178" y2="42" stroke="rgba(255,255,255,0.55)" stroke-width="3" stroke-linecap="round"/>
+          <line x1="95" y1="125" x2="42" y2="178" stroke="rgba(255,255,255,0.55)" stroke-width="3" stroke-linecap="round"/>
+          <line x1="125" y1="125" x2="178" y2="178" stroke="rgba(255,255,255,0.55)" stroke-width="3" stroke-linecap="round"/>
+          <rect x="85" y="85" width="50" height="50" rx="8" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.55)" stroke-width="2"/>
+          <line x1="110" y1="90" x2="110" y2="130" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          <line x1="90" y1="110" x2="130" y2="110" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          <circle cx="110" cy="138" r="7" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+          <circle cx="110" cy="138" r="3.5" fill="rgba(96,165,250,0.6)"/>
+          <circle cx="42"  cy="42"  r="14" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.45)" stroke-width="2"/>
+          <circle cx="178" cy="42"  r="14" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.45)" stroke-width="2"/>
+          <circle cx="42"  cy="178" r="14" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.45)" stroke-width="2"/>
+          <circle cx="178" cy="178" r="14" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.45)" stroke-width="2"/>
+          <ellipse cx="42"  cy="42"  rx="26" ry="4" fill="rgba(255,255,255,0.18)" transform="rotate(-40 42 42)"/>
+          <ellipse cx="42"  cy="42"  rx="26" ry="4" fill="rgba(255,255,255,0.18)" transform="rotate(50 42 42)"/>
+          <ellipse cx="178" cy="42"  rx="26" ry="4" fill="rgba(255,255,255,0.18)" transform="rotate(40 178 42)"/>
+          <ellipse cx="178" cy="42"  rx="26" ry="4" fill="rgba(255,255,255,0.18)" transform="rotate(-50 178 42)"/>
+          <ellipse cx="42"  cy="178" rx="26" ry="4" fill="rgba(255,255,255,0.18)" transform="rotate(40 42 178)"/>
+          <ellipse cx="42"  cy="178" rx="26" ry="4" fill="rgba(255,255,255,0.18)" transform="rotate(-50 42 178)"/>
+          <ellipse cx="178" cy="178" rx="26" ry="4" fill="rgba(255,255,255,0.18)" transform="rotate(-40 178 178)"/>
+          <ellipse cx="178" cy="178" rx="26" ry="4" fill="rgba(255,255,255,0.18)" transform="rotate(50 178 178)"/>
+          <circle cx="42"  cy="42"  r="3" fill="rgba(96,165,250,0.9)"/>
+          <circle cx="178" cy="42"  r="3" fill="rgba(96,165,250,0.9)"/>
+          <circle cx="42"  cy="178" r="3" fill="rgba(239,68,68,0.9)"/>
+          <circle cx="178" cy="178" r="3" fill="rgba(239,68,68,0.9)"/>
+          <circle cx="110" cy="110" r="4" fill="rgba(96,165,250,0.8)"/>
+        </svg>
+      </div>
+
       <div class="kpi-hero-derecha">
         <div class="kpi-hero-estado-label">Estado de caja</div>
         ${cajaBadge}

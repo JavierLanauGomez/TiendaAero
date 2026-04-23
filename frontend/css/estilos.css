@@ -219,6 +219,16 @@ body {
   text-transform: capitalize;
 }
 
+.badge-socio-activo { background: #dcfce7; color: #166534; }
+.badge-socio-baja   { background: #f3f4f6; color: #6b7280; }
+
+.socios-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
 .badge-pendiente  { background: #fef3c7; color: #92400e; }
 .badge-enviado    { background: #dbeafe; color: #1e40af; }
 .badge-entregado  { background: #dcfce7; color: #166534; }
@@ -668,6 +678,20 @@ body {
 
 .kpi-hero-subtexto { font-size: 13px; color: rgba(255,255,255,0.5); }
 
+.kpi-hero-dron {
+  flex: 0 0 auto;
+  width: 180px;
+  opacity: 0.38;
+  filter: drop-shadow(0 0 28px rgba(96,165,250,0.45));
+  animation: dron-float 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes dron-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+
 /* ── GRID DE 5 KPIs ─────────────────────────────────────────────────────── */
 /* Responsivo: 5 columnas en escritorio, 3 en tablet, 2 en móvil amplio,
    1 en móvil estrecho. */
@@ -876,6 +900,8 @@ body {
   .kpi-metricas  { grid-template-columns: repeat(2, 1fr); }
   .dashboard-grid { grid-template-columns: 1fr; }
   .kpi-hero-valor { font-size: 36px; }
+  .kpi-hero-dron  { display: none; }
+  .socios-kpis    { grid-template-columns: 1fr 1fr; }
 }
 
 /* Móvil: todo en columna única, hero en columna también */

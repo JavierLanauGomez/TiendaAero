@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from routers import productos, clientes, pedidos, categorias, autenticacion, dashboard
+from routers import productos, clientes, pedidos, categorias, autenticacion, dashboard, socios
 from auth import obtener_usuario_actual
 
 aplicacion = FastAPI()
@@ -23,6 +23,7 @@ aplicacion.include_router(productos.enrutador,  dependencies=[Depends(obtener_us
 aplicacion.include_router(clientes.enrutador,   dependencies=[Depends(obtener_usuario_actual)])
 aplicacion.include_router(pedidos.enrutador,    dependencies=[Depends(obtener_usuario_actual)])
 aplicacion.include_router(dashboard.enrutador,  dependencies=[Depends(obtener_usuario_actual)])
+aplicacion.include_router(socios.enrutador,     dependencies=[Depends(obtener_usuario_actual)])
 
 
 @aplicacion.get("/")

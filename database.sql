@@ -144,6 +144,34 @@ INSERT INTO pedidos (cliente_id, fecha, estado, total) VALUES
 -- Pedido 2 (Ana):    DJI x1    + TX16S x1              = 759.00 + 199.00          = 958.00
 -- Pedido 3 (Luis):   TREX x1   + X8R x2                = 315.00 + 59.90           = 374.90
 
+CREATE TABLE socios (
+    id         INT          NOT NULL AUTO_INCREMENT,
+    nombre     VARCHAR(150) NOT NULL,
+    email      VARCHAR(150) NOT NULL,
+    telefono   VARCHAR(20),
+    fecha_alta DATE         NOT NULL DEFAULT (CURRENT_DATE),
+    estado     ENUM('activo','baja') NOT NULL DEFAULT 'activo',
+    fecha_baja DATE,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_socios_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+INSERT INTO socios (nombre, email, telefono, fecha_alta, estado, fecha_baja) VALUES
+    ('Pedro Alonso',      'pedro.alonso@ejemplo.com',   '611223344', '2025-01-10', 'activo', NULL),
+    ('Laura Ruiz',        'laura.ruiz@ejemplo.com',     '622334455', '2025-02-14', 'activo', NULL),
+    ('Miguel Torres',     'miguel.torres@ejemplo.com',  '633445566', '2025-03-05', 'activo', NULL),
+    ('Elena Vega',        'elena.vega@ejemplo.com',     '644556677', '2025-04-20', 'activo', NULL),
+    ('David Moreno',      'david.moreno@ejemplo.com',   '655667788', '2025-06-01', 'activo', NULL),
+    ('Sofia Navarro',     'sofia.navarro@ejemplo.com',  '666778899', '2025-08-18', 'activo', NULL),
+    ('Jorge Castillo',    'jorge.castillo@ejemplo.com', '677889900', '2026-01-07', 'activo', NULL),
+    ('Marta Ibañez',      'marta.ibanez@ejemplo.com',   '688990011', '2026-02-22', 'activo', NULL),
+    ('Andres Perez',      'andres.perez@ejemplo.com',   '699001122', '2026-03-15', 'activo', NULL),
+    ('Carmen Flores',     'carmen.flores@ejemplo.com',  '611334455', '2026-04-01', 'activo', NULL),
+    ('Roberto Jimenez',   'roberto.jimenez@ejemplo.com','622445566', '2025-05-10', 'baja',   '2026-01-15'),
+    ('Isabel Santos',     'isabel.santos@ejemplo.com',  '633556677', '2025-07-03', 'baja',   '2026-02-28');
+
+
 INSERT INTO detalle_pedidos (pedido_id, producto_id, cantidad, precio_unitario) VALUES
     (1,  1, 1, 189.99),   -- Pedido 1 — Edge 540 ARF
     (1, 10, 3,  24.90),   -- Pedido 1 — Bateria LiPo x3

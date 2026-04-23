@@ -84,6 +84,7 @@
         </li>
         <li><a href="#clientes"   class="nav-enlace" data-seccion="clientes"><i data-lucide="users"></i> Clientes</a></li>
         <li><a href="#pedidos"    class="nav-enlace" data-seccion="pedidos"><i data-lucide="shopping-cart"></i> Pedidos</a></li>
+        <li><a href="#socios"     class="nav-enlace" data-seccion="socios"><i data-lucide="users-round"></i> Socios</a></li>
       </ul>
       <button class="btn-logout" onclick="cerrarSesion()"><i data-lucide="log-out"></i> Cerrar sesion</button>
     </nav>
@@ -199,6 +200,19 @@
         <div id="tabla-pedidos"></div>
       </section>
 
+      <!-- SECCION SOCIOS -->
+      <section id="sec-socios" class="seccion oculta">
+        <div class="sec-cabecera">
+          <h1>Socios</h1>
+          <div class="cabecera-acciones">
+            <input class="buscador" id="buscar-socios" type="search" placeholder="Buscar socio...">
+            <button class="btn btn-primario" onclick="abrirFormSocio()">+ Nuevo socio</button>
+          </div>
+        </div>
+        <div id="socios-stats"></div>
+        <div id="tabla-socios"></div>
+      </section>
+
     </main>
 
   </div><!-- fin #app -->
@@ -227,6 +241,7 @@
   <script src="js/productos.js"></script>
   <script src="js/clientes.js"></script>
   <script src="js/pedidos.js"></script>
+  <script src="js/socios.js"></script>
   <script>lucide.createIcons();</script>
 
 </body>

@@ -12,6 +12,7 @@ const SECCIONES = {
   productos:  { idSeccion: 'sec-productos',  cargarDatos: () => cargarProductos()  },
   clientes:   { idSeccion: 'sec-clientes',   cargarDatos: () => cargarClientes()   },
   pedidos:    { idSeccion: 'sec-pedidos',     cargarDatos: () => cargarPedidos()    },
+  socios:     { idSeccion: 'sec-socios',     cargarDatos: () => cargarSocios()     },
 };
 
 // ----------------------------------------------------------
