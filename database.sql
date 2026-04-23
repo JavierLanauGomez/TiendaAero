@@ -18,25 +18,47 @@ USE tiendaaero;
 -- ------------------------------------------------------------
 
 CREATE TABLE categorias (
-    id          INT            NOT NULL AUTO_INCREMENT,
-    nombre      VARCHAR(100)   NOT NULL,
-    descripcion TEXT,
+    id                  INT            NOT NULL AUTO_INCREMENT,
+    nombre              VARCHAR(100)   NOT NULL,
+    descripcion         TEXT,
+    imagen_url          VARCHAR(500),
+    activa              TINYINT(1)     NOT NULL DEFAULT 1,
+    orden               INT            NOT NULL DEFAULT 0,
+    color_hex           VARCHAR(7)              DEFAULT '#2563eb',
+    icono               VARCHAR(50)             DEFAULT 'tag',
+    slug                VARCHAR(100),
+    meta_descripcion    VARCHAR(300),
+    destacada           TINYINT(1)     NOT NULL DEFAULT 0,
+    fecha_creacion      DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    comision_porcentaje DECIMAL(5,2)   NOT NULL DEFAULT 0.00,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_categorias_nombre (nombre)
+    UNIQUE KEY uq_categorias_nombre (nombre),
+    UNIQUE KEY uq_categorias_slug   (slug)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 CREATE TABLE productos (
-    id           INT            NOT NULL AUTO_INCREMENT,
-    nombre       VARCHAR(200)   NOT NULL,
-    descripcion  TEXT,
-    precio       DECIMAL(10,2)  NOT NULL,
-    stock        INT            NOT NULL DEFAULT 0,
-    stock_minimo INT            NOT NULL DEFAULT 1,
-    categoria_id INT            NOT NULL,
-    marca        VARCHAR(100),
-    imagen_url   VARCHAR(500),
+    id              INT            NOT NULL AUTO_INCREMENT,
+    nombre          VARCHAR(200)   NOT NULL,
+    descripcion     TEXT,
+    precio          DECIMAL(10,2)  NOT NULL,
+    stock           INT            NOT NULL DEFAULT 0,
+    stock_minimo    INT            NOT NULL DEFAULT 1,
+    categoria_id    INT            NOT NULL,
+    marca           VARCHAR(100),
+    imagen_url      VARCHAR(500),
+    peso            DECIMAL(8,3),
+    dimensiones     VARCHAR(50),
+    codigo_ean      VARCHAR(30),
+    precio_oferta   DECIMAL(10,2),
+    destacado       TINYINT(1)     NOT NULL DEFAULT 0,
+    num_ventas      INT            NOT NULL DEFAULT 0,
+    valoracion_media DECIMAL(3,2)  NOT NULL DEFAULT 0.00,
+    garantia_meses  INT            NOT NULL DEFAULT 12,
+    fecha_creacion  DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    activo          TINYINT(1)     NOT NULL DEFAULT 1,
     PRIMARY KEY (id),
+    UNIQUE KEY uq_productos_ean (codigo_ean),
     KEY idx_productos_categoria (categoria_id),
     CONSTRAINT fk_productos_categoria
         FOREIGN KEY (categoria_id) REFERENCES categorias (id)
@@ -51,17 +73,37 @@ CREATE TABLE clientes (
     telefono        VARCHAR(20),
     direccion       VARCHAR(300),
     fecha_registro  DATE         NOT NULL DEFAULT (CURRENT_DATE),
+    ciudad          VARCHAR(100),
+    codigo_postal   VARCHAR(10),
+    pais            VARCHAR(50)  NOT NULL DEFAULT 'España',
+    fecha_nacimiento DATE,
+    newsletter      TINYINT(1)   NOT NULL DEFAULT 0,
+    vip             TINYINT(1)   NOT NULL DEFAULT 0,
+    notas           TEXT,
+    ultima_compra   DATE,
+    total_gastado   DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    num_pedidos     INT          NOT NULL DEFAULT 0,
     PRIMARY KEY (id),
     UNIQUE KEY uq_clientes_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 CREATE TABLE pedidos (
-    id         INT            NOT NULL AUTO_INCREMENT,
-    cliente_id INT            NOT NULL,
-    fecha      DATE           NOT NULL DEFAULT (CURRENT_DATE),
-    estado     ENUM('pendiente','enviado','entregado') NOT NULL DEFAULT 'pendiente',
-    total      DECIMAL(10,2)  NOT NULL DEFAULT 0.00,
+    id                  INT            NOT NULL AUTO_INCREMENT,
+    cliente_id          INT            NOT NULL,
+    fecha               DATE           NOT NULL DEFAULT (CURRENT_DATE),
+    estado              ENUM('pendiente','enviado','entregado') NOT NULL DEFAULT 'pendiente',
+    total               DECIMAL(10,2)  NOT NULL DEFAULT 0.00,
+    direccion_envio     VARCHAR(300),
+    metodo_pago         ENUM('tarjeta','transferencia','efectivo','paypal') NOT NULL DEFAULT 'tarjeta',
+    numero_seguimiento  VARCHAR(100),
+    notas               TEXT,
+    descuento           DECIMAL(10,2)  NOT NULL DEFAULT 0.00,
+    fecha_envio         DATE,
+    fecha_entrega       DATE,
+    transportista       VARCHAR(100),
+    facturado           TINYINT(1)     NOT NULL DEFAULT 0,
+    referencia_externa  VARCHAR(50),
     PRIMARY KEY (id),
     KEY idx_pedidos_cliente (cliente_id),
     CONSTRAINT fk_pedidos_cliente
@@ -71,11 +113,21 @@ CREATE TABLE pedidos (
 
 
 CREATE TABLE detalle_pedidos (
-    id              INT           NOT NULL AUTO_INCREMENT,
-    pedido_id       INT           NOT NULL,
-    producto_id     INT           NOT NULL,
-    cantidad        INT           NOT NULL,
-    precio_unitario DECIMAL(10,2) NOT NULL,
+    id               INT           NOT NULL AUTO_INCREMENT,
+    pedido_id        INT           NOT NULL,
+    producto_id      INT           NOT NULL,
+    cantidad         INT           NOT NULL,
+    precio_unitario  DECIMAL(10,2) NOT NULL,
+    descuento        DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    subtotal         DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    iva_porcentaje   DECIMAL(5,2)  NOT NULL DEFAULT 21.00,
+    notas            VARCHAR(200),
+    devuelto         TINYINT(1)    NOT NULL DEFAULT 0,
+    fecha_devolucion DATE,
+    motivo_devolucion VARCHAR(200),
+    precio_coste     DECIMAL(10,2),
+    margen           DECIMAL(10,2),
+    numero_serie     VARCHAR(50),
     PRIMARY KEY (id),
     KEY idx_detalle_pedido   (pedido_id),
     KEY idx_detalle_producto (producto_id),
@@ -92,8 +144,19 @@ CREATE TABLE usuarios (
     id               INT          NOT NULL AUTO_INCREMENT,
     nombre_usuario   VARCHAR(50)  NOT NULL,
     contrasena_hash  VARCHAR(255) NOT NULL,
+    email            VARCHAR(150),
+    nombre_completo  VARCHAR(200),
+    rol              ENUM('admin','empleado') NOT NULL DEFAULT 'empleado',
+    activo           TINYINT(1)   NOT NULL DEFAULT 1,
+    ultimo_acceso    DATETIME,
+    fecha_creacion   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    intentos_fallidos INT         NOT NULL DEFAULT 0,
+    bloqueado        TINYINT(1)   NOT NULL DEFAULT 0,
+    avatar_url       VARCHAR(500),
+    notas            TEXT,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_usuarios_nombre (nombre_usuario)
+    UNIQUE KEY uq_usuarios_nombre (nombre_usuario),
+    UNIQUE KEY uq_usuarios_email  (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
@@ -183,15 +246,28 @@ INSERT INTO pedidos (cliente_id, fecha, estado, total) VALUES
 -- Pedido 3 (Luis):   TREX x1   + X8R x2                = 315.00 + 59.90           = 374.90
 
 CREATE TABLE socios (
-    id         INT          NOT NULL AUTO_INCREMENT,
-    nombre     VARCHAR(150) NOT NULL,
-    email      VARCHAR(150) NOT NULL,
-    telefono   VARCHAR(20),
-    fecha_alta DATE         NOT NULL DEFAULT (CURRENT_DATE),
-    estado     ENUM('activo','baja') NOT NULL DEFAULT 'activo',
-    fecha_baja DATE,
+    id                  INT          NOT NULL AUTO_INCREMENT,
+    nombre              VARCHAR(150) NOT NULL,
+    email               VARCHAR(150) NOT NULL,
+    telefono            VARCHAR(20),
+    direccion           VARCHAR(300),
+    ciudad              VARCHAR(100),
+    fecha_nacimiento    DATE,
+    nivel               ENUM('bronce','plata','oro','platino') NOT NULL DEFAULT 'bronce',
+    puntos              INT          NOT NULL DEFAULT 0,
+    descuento_porcentaje DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+    notas               TEXT,
+    dni                 VARCHAR(15),
+    newsletter          TINYINT(1)   NOT NULL DEFAULT 1,
+    referido_por        INT,
+    fecha_alta          DATE         NOT NULL DEFAULT (CURRENT_DATE),
+    estado              ENUM('activo','baja') NOT NULL DEFAULT 'activo',
+    fecha_baja          DATE,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_socios_email (email)
+    UNIQUE KEY uq_socios_email (email),
+    CONSTRAINT fk_socios_referido
+        FOREIGN KEY (referido_por) REFERENCES socios (id)
+        ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
