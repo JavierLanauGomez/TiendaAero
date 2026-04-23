@@ -85,6 +85,7 @@
         <li><a href="#clientes"   class="nav-enlace" data-seccion="clientes"><i data-lucide="users"></i> Clientes</a></li>
         <li><a href="#pedidos"    class="nav-enlace" data-seccion="pedidos"><i data-lucide="shopping-cart"></i> Pedidos</a></li>
         <li><a href="#socios"     class="nav-enlace" data-seccion="socios"><i data-lucide="users-round"></i> Socios</a></li>
+        <li><a href="#caja"      class="nav-enlace" data-seccion="caja"><i data-lucide="receipt"></i> Caja</a></li>
       </ul>
       <button class="btn-logout" onclick="cerrarSesion()"><i data-lucide="log-out"></i> Cerrar sesion</button>
     </nav>
@@ -101,6 +102,54 @@
             <p>Panel de gestión para tu tienda especializada en drones y equipos aéreos</p>
             <button class="btn btn-hero" onclick="location.hash='#dashboard'">Ver dashboard</button>
           </div>
+          <svg class="inicio-tienda-svg" width="280" height="210" viewBox="0 0 280 210" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <!-- Fachada -->
+            <rect x="20" y="85" width="240" height="115" fill="#0f172a" rx="6"/>
+            <!-- Toldo -->
+            <polygon points="10,85 140,42 270,85" fill="#2563eb"/>
+            <polygon points="10,85 38,68 38,85" fill="#1d4ed8" opacity="0.5"/>
+            <polygon points="68,52 88,48 68,85 48,85" fill="#1d4ed8" opacity="0.5"/>
+            <polygon points="128,43 148,43 128,85 108,85" fill="#1d4ed8" opacity="0.5"/>
+            <polygon points="192,48 212,53 192,85 172,85" fill="#1d4ed8" opacity="0.5"/>
+            <polygon points="242,68 270,85 250,85" fill="#1d4ed8" opacity="0.5"/>
+            <!-- Cartel -->
+            <rect x="78" y="54" width="124" height="20" fill="#1e40af" rx="4"/>
+            <text x="140" y="69" font-family="system-ui,sans-serif" font-size="10" font-weight="700" fill="white" text-anchor="middle">TIENDA AERO</text>
+            <!-- Escaparate izquierdo -->
+            <rect x="30" y="100" width="96" height="68" fill="#1e3a5f" rx="3"/>
+            <rect x="32" y="102" width="92" height="64" fill="#0d2137" rx="2"/>
+            <!-- Drone en escaparate izq -->
+            <circle cx="78" cy="126" r="9" fill="none" stroke="#60a5fa" stroke-width="1.5"/>
+            <line x1="69" y1="126" x2="52" y2="126" stroke="#60a5fa" stroke-width="1.5"/>
+            <line x1="87" y1="126" x2="104" y2="126" stroke="#60a5fa" stroke-width="1.5"/>
+            <circle cx="50" cy="126" r="4" fill="#3b82f6"/>
+            <circle cx="106" cy="126" r="4" fill="#3b82f6"/>
+            <line x1="78" y1="117" x2="78" y2="105" stroke="#60a5fa" stroke-width="1.5"/>
+            <line x1="78" y1="135" x2="78" y2="147" stroke="#60a5fa" stroke-width="1.5"/>
+            <circle cx="78" cy="103" r="3" fill="#3b82f6"/>
+            <circle cx="78" cy="149" r="3" fill="#3b82f6"/>
+            <text x="78" y="160" font-family="system-ui,sans-serif" font-size="7" fill="#60a5fa" text-anchor="middle">DRONE FPV</text>
+            <!-- Escaparate derecho -->
+            <rect x="154" y="100" width="96" height="68" fill="#1e3a5f" rx="3"/>
+            <rect x="156" y="102" width="92" height="64" fill="#0d2137" rx="2"/>
+            <!-- Avión en escaparate der -->
+            <path d="M168,128 Q202,112 234,128 Q202,144 168,128 Z" fill="#3b82f6" opacity="0.8"/>
+            <line x1="202" y1="112" x2="202" y2="148" stroke="#60a5fa" stroke-width="1.5"/>
+            <path d="M186,120 L170,115 L170,121" fill="#2563eb"/>
+            <path d="M218,120 L234,115 L234,121" fill="#2563eb"/>
+            <text x="202" y="160" font-family="system-ui,sans-serif" font-size="7" fill="#60a5fa" text-anchor="middle">AVIÓN RC</text>
+            <!-- Puerta central -->
+            <rect x="119" y="143" width="42" height="57" fill="#0a1628" rx="3"/>
+            <rect x="120" y="144" width="40" height="55" fill="#0d1f38" rx="2"/>
+            <circle cx="153" cy="172" r="2.5" fill="#60a5fa"/>
+            <!-- Faroles -->
+            <rect x="22" y="158" width="3" height="42" fill="#334155"/>
+            <polygon points="20,158 27,158 23.5,148" fill="#fbbf24"/>
+            <rect x="255" y="158" width="3" height="42" fill="#334155"/>
+            <polygon points="253,158 260,158 256.5,148" fill="#fbbf24"/>
+            <!-- Suelo -->
+            <rect x="0" y="200" width="280" height="10" fill="#0f172a"/>
+          </svg>
         </div>
 
         <div class="inicio-accesos">
@@ -200,6 +249,17 @@
         <div id="tabla-pedidos"></div>
       </section>
 
+      <!-- SECCION CAJA -->
+      <section id="sec-caja" class="seccion oculta">
+        <div class="sec-cabecera">
+          <div>
+            <h1>Caja</h1>
+            <p style="color:var(--texto-suave);margin-top:2px">Especialistas en equipos aéreos</p>
+          </div>
+        </div>
+        <div id="contenido-caja"></div>
+      </section>
+
       <!-- SECCION SOCIOS -->
       <section id="sec-socios" class="seccion oculta">
         <div class="sec-cabecera">
@@ -242,6 +302,7 @@
   <script src="js/clientes.js"></script>
   <script src="js/pedidos.js"></script>
   <script src="js/socios.js"></script>
+  <script src="js/caja.js"></script>
   <script>lucide.createIcons();</script>
 
 </body>

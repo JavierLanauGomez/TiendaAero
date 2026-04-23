@@ -13,6 +13,7 @@ const SECCIONES = {
   clientes:   { idSeccion: 'sec-clientes',   cargarDatos: () => cargarClientes()   },
   pedidos:    { idSeccion: 'sec-pedidos',     cargarDatos: () => cargarPedidos()    },
   socios:     { idSeccion: 'sec-socios',     cargarDatos: () => cargarSocios()     },
+  caja:       { idSeccion: 'sec-caja',      cargarDatos: () => cargarCaja()       },
 };
 
 // ----------------------------------------------------------

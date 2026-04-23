@@ -332,6 +332,65 @@ INSERT INTO socios (nombre, email, telefono, fecha_alta, estado, fecha_baja) VAL
     ('Amparo Rios',      'amparo.rios@ejemplo.com',      '644667713', '2025-09-04', 'baja', '2026-04-05');
 
 
+-- 15 clientes adicionales
+INSERT INTO clientes (nombre, email, telefono, direccion, fecha_registro) VALUES
+('Javier Ruiz',       'javier.ruiz@ejemplo.com',       '611100001', 'Calle Alcala 55, Madrid',        '2024-03-20'),
+('Carla Soto',        'carla.soto@ejemplo.com',         '622200002', 'Av. del Puerto 12, Valencia',    '2024-04-10'),
+('Miguel Angel Reyes','miguelangel.reyes@ejemplo.com',  '633300003', 'Paseo Independencia 8, Zaragoza','2024-05-01'),
+('Nuria Castillo',    'nuria.castillo@ejemplo.com',     '644400004', 'Alameda Principal 3, Malaga',    '2024-06-14'),
+('Oscar Mendez',      'oscar.mendez@ejemplo.com',       '655500005', 'Gran Via Escobar 22, Murcia',    '2024-07-08'),
+('Alicia Torres',     'alicia.torres@ejemplo.com',      '666600006', 'Calle Mayor 10, Alicante',       '2024-08-19'),
+('Roberto Herrera',   'roberto.herrera@ejemplo.com',    '677700007', 'Paseo Zorrilla 5, Valladolid',   '2024-09-25'),
+('Vanessa Gil',       'vanessa.gil@ejemplo.com',        '688800008', 'Av. Gran Capitan 16, Cordoba',   '2024-10-03'),
+('Tomas Navarro',     'tomas.navarro@ejemplo.com',      '699900009', 'Reyes Catolicos 7, Granada',     '2024-11-17'),
+('Pilar Vega',        'pilar.vega@ejemplo.com',         '611200010', 'Rua Policarpo Sanz 1, Vigo',     '2024-12-05'),
+('Fernando Molina',   'fernando.molina@ejemplo.com',    '622300011', 'Calle Uria 30, Oviedo',          '2025-01-12'),
+('Cristina Romero',   'cristina.romero@ejemplo.com',    '633400012', 'Av. Carlos III 9, Pamplona',     '2025-02-28'),
+('Adrian Blanco',     'adrian.blanco@ejemplo.com',      '644500013', 'Paseo del Espolon 2, Burgos',    '2025-03-16'),
+('Monica Perez',      'monica.perez@ejemplo.com',       '655600014', 'Calle Burgos 4, Santander',      '2025-04-07'),
+('Sergio Campos',     'sergio.campos@ejemplo.com',      '666700015', 'Calle Comercio 18, Toledo',      '2025-05-22');
+
+-- 20 productos adicionales (IDs 43-62)
+INSERT INTO productos (nombre, descripcion, precio, stock, stock_minimo, categoria_id, marca, imagen_url) VALUES
+('Pilatus PC-9 ARF 1.4m',      'Avion de entrenamiento avanzado, escala 1:7, madera balsa reforzada',     319.00,  3, 2, 1, 'Pilot-RC',   'https://placehold.co/400x300?text=Pilatus+PC9'),
+('Extra 260 3D ARF 1.0m',      'Avion acrobatico 3D, liviano, ideal circuito indoor y outdoor',           189.00,  5, 2, 1, 'SebArt',     'https://placehold.co/400x300?text=Extra+260'),
+('T-28 Trojan PNP 1.2m',       'Avion vintage militar, motor brushless, tren retractil electrico',        279.00,  4, 2, 1, 'FMS',        'https://placehold.co/400x300?text=T28+Trojan'),
+('L-39 Albatros EDF 1.0m',     'Reactor EDF 64mm, motor 3S, muy maniobrable y rapido',                   239.00,  3, 2, 1, 'Freewing',   'https://placehold.co/400x300?text=L39+Albatros'),
+('SAB Goblin 700 Raw KIT',     'Helicoptero de competicion 700mm, KIT completo sin electronica',          995.00,  1, 1, 2, 'SAB',        'https://placehold.co/400x300?text=Goblin+700'),
+('Compass Knight 700 Electric','Heli 700mm electric con motor integrado, marco carbono',                  849.00,  2, 1, 2, 'Compass',    'https://placehold.co/400x300?text=Knight+700'),
+('Oxy 5 Mega Combo',           'Helicoptero 500mm, combo completo motor+servos+ESC incluidos',            699.00,  2, 2, 2, 'SAB',        'https://placehold.co/400x300?text=Oxy+5+Mega'),
+('XL Power Protos 500 EVO',    'Heli 500mm EVO edition, optimizado para 3D extremo',                      549.00,  2, 2, 2, 'XL Power',   'https://placehold.co/400x300?text=Protos+500'),
+('DJI FPV Combo V2',           'Drone FPV semi-rigido con gafas DJI y control de movimiento',            1099.00,  3, 2, 3, 'DJI',        'https://placehold.co/400x300?text=DJI+FPV+V2'),
+('iFlight Nazgul5 V3 HD',      'Freestyle 5 pulgadas HD, ESC 45A, motor XING2 2207',                     329.00,  4, 2, 3, 'iFlight',    'https://placehold.co/400x300?text=Nazgul5+V3'),
+('GEPRC Cinelog35 V2 HD',      'Cinewhoop 3.5 pulgadas, conductos protectores, ideal filmacion',          299.00,  4, 3, 3, 'GEPRC',      'https://placehold.co/400x300?text=Cinelog35+V2'),
+('Flywoo Explorer LR V2',      'Long range 4 pulgadas, ultra ligero 165g, 20+ min autonomia',             249.00,  5, 3, 3, 'Flywoo',     'https://placehold.co/400x300?text=Explorer+LR'),
+('Spektrum iX20 24CH',         'Emisora tope de gama 24 canales AS3X, pantalla tactil 4.3 pulgadas',      899.00,  2, 1, 4, 'Spektrum',   'https://placehold.co/400x300?text=Spektrum+iX20'),
+('FlySky FS-i10 10CH',         'Emisora 10 canales AFHDS2A, pantalla LCD, relacion calidad/precio',        89.00,  8, 3, 4, 'FlySky',     'https://placehold.co/400x300?text=FS-i10'),
+('Radiomaster Boxer ELRS',     'Emisora compacta ELRS modo gamer, ideal FPV racing',                      159.00,  6, 2, 4, 'Radiomaster','https://placehold.co/400x300?text=Boxer+ELRS'),
+('Hitec Aurora 9X 9CH',        'Emisora 9 canales AFHSS, telemetria integrada, alta precision',           449.00,  3, 2, 4, 'Hitec',      'https://placehold.co/400x300?text=Aurora+9X'),
+('Bateria LiPo 3S 2200 mAh',   'Bateria 3S 11.1V 2200 mAh 30C ideal aviones y helis de escuela',          18.90, 25, 8, 5, 'GNB',        'https://placehold.co/400x300?text=LiPo+3S'),
+('Motor Emax RS2205 2300KV',   'Motor brushless racing 2205 2300KV, eje titanio, bujes aluminio',          22.90, 18, 5, 5, 'Emax',       'https://placehold.co/400x300?text=RS2205'),
+('ESC Aikon AK32 35A',         'ESC BLHeli_32 35A individual, telemetria RPM, firmware actualizable',      19.90, 15, 5, 5, 'Aikon',      'https://placehold.co/400x300?text=AK32+35A'),
+('Prop Saver Adapter Set',     'Set de 4 prop-savers para motores 2-3mm, evita danos en helices',           6.90, 40,10, 5, 'HQProp',     'https://placehold.co/400x300?text=Prop+Saver');
+
+-- Pedidos 4-18
+INSERT INTO pedidos (cliente_id, fecha, estado, total, direccion_envio, metodo_pago, numero_seguimiento, descuento, fecha_envio, fecha_entrega, transportista, facturado, referencia_externa) VALUES
+(1, '2024-05-15', 'entregado', 308.80,  'Calle Mayor 12, Madrid',         'tarjeta',       'COR20240516M001', 0.00, '2024-05-16', '2024-05-19', 'Correos', 1, 'TDA-2024-0001'),
+(4, '2024-06-03', 'entregado', 1628.00, 'Gran Via 100, Bilbao',           'transferencia', 'DHL20240604B001', 0.00, '2024-06-04', '2024-06-06', 'DHL',     1, 'TDA-2024-0002'),
+(3, '2024-07-18', 'enviado',   583.80,  'Calle Real 8, Sevilla',          'tarjeta',       'MRW20240719S001', 0.00, '2024-07-19', NULL,         'MRW',     0, 'TDA-2024-0003'),
+(2, '2024-08-05', 'pendiente', 808.90,  'Av. Catalunya 45, Barcelona',    'transferencia', NULL,              0.00, NULL,         NULL,         NULL,      0, 'TDA-2024-0004'),
+(1, '2024-09-12', 'entregado', 716.40,  'Calle Mayor 12, Madrid',         'tarjeta',       'GLS20240913M001', 0.00, '2024-09-13', '2024-09-16', 'GLS',     1, 'TDA-2024-0005'),
+(4, '2024-10-28', 'entregado', 435.30,  'Gran Via 100, Bilbao',           'tarjeta',       'SEUR20241029B001',0.00, '2024-10-29', '2024-11-01', 'SEUR',    1, 'TDA-2024-0006'),
+(3, '2024-11-15', 'entregado', 478.60,  'Calle Real 8, Sevilla',          'efectivo',      'COR20241116S001', 0.00, '2024-11-16', '2024-11-20', 'Correos', 1, 'TDA-2024-0007'),
+(2, '2024-12-01', 'entregado', 1007.80, 'Av. Catalunya 45, Barcelona',    'tarjeta',       'COR20241202B001', 0.00, '2024-12-02', '2024-12-05', 'Correos', 1, 'TDA-2024-0008'),
+(1, '2025-01-20', 'entregado', 404.80,  'Calle Mayor 12, Madrid',         'paypal',        'DHL20250121M001', 0.00, '2025-01-21', '2025-01-23', 'DHL',     1, 'TDA-2025-0001'),
+(4, '2025-02-14', 'pendiente', 558.50,  'Gran Via 100, Bilbao',           'tarjeta',       NULL,              0.00, NULL,         NULL,         NULL,      0, 'TDA-2025-0002'),
+(3, '2025-03-08', 'enviado',   948.90,  'Calle Real 8, Sevilla',          'transferencia', 'MRW20253091245',  0.00, '2025-03-09', NULL,         'MRW',     0, 'TDA-2025-0003'),
+(2, '2025-04-22', 'entregado', 497.50,  'Av. Catalunya 45, Barcelona',    'tarjeta',       'GLS20250423B001', 0.00, '2025-04-23', '2025-04-25', 'GLS',     1, 'TDA-2025-0004'),
+(1, '2025-06-10', 'entregado', 437.00,  'Calle Mayor 12, Madrid',         'tarjeta',       'COR20250611M001', 0.00, '2025-06-11', '2025-06-14', 'Correos', 1, 'TDA-2025-0005'),
+(4, '2025-08-30', 'enviado',   938.00,  'Gran Via 100, Bilbao',           'transferencia', 'DHL20250901XY12', 0.00, '2025-08-31', NULL,         'DHL',     0, 'TDA-2025-0006'),
+(3, '2025-11-05', 'pendiente', 551.00,  'Calle Real 8, Sevilla',          'tarjeta',       NULL,              0.00, NULL,         NULL,         NULL,      0, 'TDA-2025-0007');
+
 INSERT INTO detalle_pedidos (pedido_id, producto_id, cantidad, precio_unitario) VALUES
     (1,  1, 1, 189.99),   -- Pedido 1 — Edge 540 ARF
     (1, 10, 3,  24.90),   -- Pedido 1 — Bateria LiPo x3
@@ -339,4 +398,20 @@ INSERT INTO detalle_pedidos (pedido_id, producto_id, cantidad, precio_unitario) 
     (2,  6, 1, 759.00),   -- Pedido 2 — DJI Mini 4 Pro
     (2,  8, 1, 199.00),   -- Pedido 2 — Emisora TX16S
     (3,  4, 1, 315.00),   -- Pedido 3 — Helicoptero T-REX 450
-    (3,  9, 2,  29.95);   -- Pedido 3 — Receptor X8R x2
+    (3,  9, 2,  29.95),   -- Pedido 3 — Receptor X8R x2
+-- Detalle pedidos 4-18
+    (4,  14, 1, 259.00), (4,  10, 2,  24.90),
+    (5,  23, 1,1199.00), (5,  42, 1, 429.00),
+    (6,  19, 1, 389.00), (6,  37, 1, 129.00), (6,  36, 2,  32.90),
+    (7,  32, 1, 749.00), (7,   9, 2,  29.95),
+    (8,  24, 1, 499.00), (8,  41, 2,  28.90), (8,  38, 4,  39.90),
+    (9,  25, 1, 299.00), (9,  39, 1,  49.90), (9,  40, 1,  69.90), (9,  12, 3,   5.50),
+    (10, 13, 1, 379.00), (10, 10, 4,  24.90),
+    (11,  6, 1, 759.00), (11,  8, 1, 199.00), (11, 10, 2,  24.90),
+    (12, 17, 1, 345.00), (12, 34, 2,  29.90),
+    (13, 26, 1, 349.00), (13, 38, 4,  39.90), (13, 39, 1,  49.90),
+    (14, 20, 1, 899.00), (14, 11, 1,  49.90),
+    (15, 31, 1, 329.00), (15, 35, 2,  34.90), (15, 36, 3,  32.90),
+    (16, 27, 2, 129.00), (16, 28, 1, 179.00),
+    (17, 21, 1, 749.00), (17, 30, 1, 189.00),
+    (18, 18, 1, 299.00), (18, 16, 1, 219.00), (18, 12, 6,   5.50);

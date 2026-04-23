@@ -1211,3 +1211,78 @@ body {
   height: 18px;
   vertical-align: middle;
 }
+
+/* ============================================================
+   INICIO — ilustración tienda
+   ============================================================ */
+.inicio-hero {
+  justify-content: space-between;
+}
+.inicio-tienda-svg {
+  flex-shrink: 0;
+  opacity: 0.9;
+  filter: drop-shadow(0 8px 32px rgba(59,130,246,0.35));
+}
+@media (max-width: 900px) {
+  .inicio-tienda-svg { display: none; }
+}
+
+/* ============================================================
+   CAJA — punto de venta rápido
+   ============================================================ */
+.caja-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 240px;
+  gap: 16px;
+  align-items: start;
+}
+.caja-panel { padding: 20px; }
+.caja-panel-titulo {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--texto);
+}
+.caja-hint {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+  margin-top: 4px;
+}
+.caja-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 2px solid var(--borde);
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.caja-vacio {
+  color: var(--texto-suave);
+  font-size: 0.85rem;
+  padding: 16px 0;
+  text-align: center;
+}
+.caja-acumulado-panel { text-align: center; }
+.caja-stat-big {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-primario);
+  margin: 20px 0 6px;
+  letter-spacing: -1px;
+}
+.caja-stat-sub {
+  color: var(--texto-suave);
+  font-size: 0.85rem;
+}
+.caja-btn-cobrar {
+  background: var(--color-exito) !important;
+  border-color: var(--color-exito) !important;
+}
+.caja-btn-cobrar:hover { filter: brightness(1.1); }
+
+@media (max-width: 900px) {
+  .caja-grid { grid-template-columns: 1fr; }
+}
