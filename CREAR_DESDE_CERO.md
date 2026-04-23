@@ -39,6 +39,8 @@
 32. [Mejora: Dashboard — panel de control visual](#32-mejora-dashboard--panel-de-control-visual)
 33. [Mejora: Editar líneas de un pedido](#33-mejora-editar-líneas-de-un-pedido)
 34. [Mejora: Alertas de stock bajo](#34-mejora-alertas-de-stock-bajo)
+35. [Mejora: Módulo de Socios](#35-mejora-módulo-de-socios)
+36. [Tests unitarios del backend](#36-tests-unitarios-del-backend)
 
 ---
 
@@ -57,6 +59,7 @@ Piensa en las "cosas" que la aplicación necesita gestionar:
 - **Productos** → artículos del catálogo, cada uno pertenece a una categoría
 - **Clientes** → personas que compran
 - **Pedidos** → compras realizadas por un cliente, compuestas por uno o más productos
+- **Socios** → miembros del club/programa de fidelización, con seguimiento de altas y bajas
 
 **¿Qué relaciones hay entre ellas?**
 
@@ -132,10 +135,19 @@ TiendaAero/
 │   ├── database.py
 │   └── routers/
 │       ├── __init__.py
+│       ├── autenticacion.py
 │       ├── categorias.py
 │       ├── productos.py
 │       ├── clientes.py
-│       └── pedidos.py
+│       ├── pedidos.py
+│       ├── dashboard.py
+│       └── socios.py
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py
+│   ├── test_socios.py
+│   ├── test_productos.py
+│   └── test_clientes.py
 └── frontend/
     ├── index.html
     ├── css/
@@ -147,7 +159,9 @@ TiendaAero/
         ├── categorias.js
         ├── productos.js
         ├── clientes.js
-        └── pedidos.js
+        ├── pedidos.js
+        ├── dashboard.js
+        └── socios.js
 ```
 
 ---
@@ -662,7 +676,8 @@ Crea `backend/main.py`:
 ```python
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import productos, clientes, pedidos, categorias
+from routers import productos, clientes, pedidos, categorias, autenticacion, dashboard, socios
+from auth import obtener_usuario_actual
 
 aplicacion = FastAPI()
 
@@ -673,10 +688,16 @@ aplicacion.add_middleware(
     allow_headers=["*"],
 )
 
-aplicacion.include_router(categorias.enrutador)
-aplicacion.include_router(productos.enrutador)
-aplicacion.include_router(clientes.enrutador)
-aplicacion.include_router(pedidos.enrutador)
+# Autenticación no requiere token (genera el token)
+aplicacion.include_router(autenticacion.enrutador)
+
+# El resto requieren JWT válido
+aplicacion.include_router(categorias.enrutador, dependencies=[Depends(obtener_usuario_actual)])
+aplicacion.include_router(productos.enrutador,  dependencies=[Depends(obtener_usuario_actual)])
+aplicacion.include_router(clientes.enrutador,   dependencies=[Depends(obtener_usuario_actual)])
+aplicacion.include_router(pedidos.enrutador,    dependencies=[Depends(obtener_usuario_actual)])
+aplicacion.include_router(dashboard.enrutador,  dependencies=[Depends(obtener_usuario_actual)])
+aplicacion.include_router(socios.enrutador,     dependencies=[Depends(obtener_usuario_actual)])
 
 
 @aplicacion.get("/")
@@ -3837,3 +3858,188 @@ if (localStorage.getItem('dark') === 'true') {
 | ⭐⭐⭐ | Gráfica donut pedidos por estado | 2 horas |
 | ⭐⭐⭐ | Sidebar colapsable | 2–3 horas |
 | ⭐⭐ | Dark mode | 3–4 horas |
+
+---
+
+## 35. Mejora: Módulo de Socios
+
+### Qué añade
+
+Un módulo completo de gestión de socios (miembros del programa de fidelización), integrado como nueva sección del panel con:
+
+- **3 KPIs** en la cabecera: socios activos, bajas del año en curso, nuevas altas del mes
+- **Tabla completa** con buscador en tiempo real, estado con badge de color, fecha de alta/baja
+- **CRUD completo**: alta, edición, baja (cambia estado y registra fecha), eliminación
+- **Navegación** integrada en el sidebar igual que el resto de secciones
+
+### Tabla `socios` en la BD
+
+```sql
+CREATE TABLE socios (
+    id         INT          NOT NULL AUTO_INCREMENT,
+    nombre     VARCHAR(150) NOT NULL,
+    email      VARCHAR(150) NOT NULL,
+    telefono   VARCHAR(20),
+    fecha_alta DATE         NOT NULL DEFAULT (CURRENT_DATE),
+    estado     ENUM('activo','baja') NOT NULL DEFAULT 'activo',
+    fecha_baja DATE,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_socios_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+### Backend: `routers/socios.py`
+
+Endpoints disponibles:
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/socios` | Lista todos los socios ordenados por fecha de alta |
+| GET | `/socios/estadisticas` | Devuelve activos, bajas del año y altas del mes |
+| GET | `/socios/{id}` | Obtiene un socio por ID |
+| POST | `/socios` | Crea un nuevo socio (estado=activo por defecto) |
+| PUT | `/socios/{id}` | Actualiza campos — también sirve para dar de baja |
+| DELETE | `/socios/{id}` | Elimina el socio permanentemente |
+
+> **Nota de routing**: `/socios/estadisticas` se define **antes** de `/socios/{id}` en el router. Como `{id}` está tipado como `int`, FastAPI no intenta parsear "estadisticas" como entero y resuelve el orden correctamente.
+
+### Frontend: `js/socios.js`
+
+- `cargarSocios()` — carga estadísticas y tabla en paralelo con `Promise.all`
+- `_renderizarStats(stats)` — pinta los 3 KPI cards reutilizando `.kpi-metrica` del dashboard
+- `abrirFormSocio(id)` — modal de alta o edición
+- `darDeBajaSocio(id)` — PUT con `{ estado: "baja", fecha_baja: hoy }`
+- `eliminarSocio(id)` — DELETE con confirmación
+
+### Integración en `app.js`
+
+Añadir la entrada en el mapa `SECCIONES`:
+
+```js
+socios: { idSeccion: 'sec-socios', cargarDatos: () => cargarSocios() },
+```
+
+### Estilos añadidos en `estilos.css`
+
+```css
+.socios-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.badge-socio-activo { background: #dcfce7; color: #166534; }
+.badge-socio-baja   { background: #f3f4f6; color: #6b7280; }
+```
+
+---
+
+## 36. Tests unitarios del backend
+
+### Estrategia de testing
+
+Los tests no requieren MySQL en marcha. Se usan dos técnicas:
+
+1. **Override de dependencia JWT** — `aplicacion.dependency_overrides` sustituye `obtener_usuario_actual` por una función que devuelve un usuario ficticio, evitando que todos los endpoints rechacen las peticiones con 401.
+
+2. **Mock de base de datos** — `unittest.mock.patch` reemplaza `obtener_cursor` por un contextmanager falso que devuelve valores predefinidos. Así los tests son deterministas, rápidos y sin efectos secundarios.
+
+### Instalación de dependencias de desarrollo
+
+```bash
+pip install -r backend/requirements-dev.txt
+```
+
+`backend/requirements-dev.txt`:
+```
+pytest==8.3.5
+httpx==0.28.1
+```
+
+### Estructura de tests
+
+```
+backend/
+└── tests/
+    ├── __init__.py
+    ├── conftest.py        ← fixtures compartidos (cliente HTTP, helper cursor_mock)
+    ├── test_socios.py     ← 15 tests: GET lista, GET estadísticas, GET/{id}, POST, PUT, DELETE
+    ├── test_productos.py  ← 8 tests: CRUD básico de productos
+    └── test_clientes.py   ← 10 tests: CRUD + historial de pedidos
+```
+
+### Ejecutar todos los tests
+
+Desde la carpeta raíz del proyecto:
+
+```bash
+cd backend
+pytest tests/ -v
+```
+
+Salida esperada:
+
+```
+tests/test_socios.py::test_listar_socios_devuelve_lista      PASSED
+tests/test_socios.py::test_listar_socios_vacio               PASSED
+tests/test_socios.py::test_estadisticas_devuelve_tres_metricas PASSED
+...
+33 passed in 1.2s
+```
+
+### El helper `cursor_mock`
+
+Definido en `conftest.py`, evita duplicar código en cada test:
+
+```python
+def cursor_mock(fetchall=None, fetchone=None, rowcount=1, lastrowid=1):
+    @contextmanager
+    def _cm(dictionary=False):
+        conn = MagicMock()
+        cur  = MagicMock()
+        cur.rowcount  = rowcount
+        cur.lastrowid = lastrowid
+        if fetchall is not None:
+            cur.fetchall.return_value = fetchall
+        if fetchone is not None:
+            if isinstance(fetchone, list):
+                cur.fetchone.side_effect = fetchone  # múltiples llamadas
+            else:
+                cur.fetchone.return_value = fetchone
+        yield conn, cur
+    return _cm
+```
+
+Uso en un test:
+
+```python
+def test_crear_socio_correcto(client):
+    nuevo = {"nombre": "Test", "email": "test@test.com"}
+    with patch("routers.socios.obtener_cursor", cursor_mock(lastrowid=42)):
+        resp = client.post("/socios", json=nuevo)
+    assert resp.status_code == 201
+    assert resp.json()["id"] == 42
+```
+
+### Qué cubre cada fichero
+
+**`test_socios.py`** (15 tests)
+- Lista vacía y con datos
+- Estadísticas con valores reales y con ceros
+- GET por ID — existente y no encontrado (404)
+- POST — correcto, sin nombre (422), sin email (422)
+- PUT — actualización, no encontrado (404), sin campos (400), dar de baja
+- DELETE — existente y no encontrado (404)
+
+**`test_productos.py`** (8 tests)
+- Lista, GET por ID, GET no encontrado
+- POST correcto, POST precio negativo (documenta comportamiento actual)
+- PUT, DELETE existente y no encontrado
+
+**`test_clientes.py`** (10 tests)
+- Lista, GET por ID, GET no encontrado
+- POST correcto y sin email
+- PUT existente y no encontrado
+- DELETE existente y no encontrado
+- Historial de pedidos por cliente
