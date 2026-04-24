@@ -41,6 +41,9 @@
 34. [Mejora: Alertas de stock bajo](#34-mejora-alertas-de-stock-bajo)
 35. [Mejora: Módulo de Socios](#35-mejora-módulo-de-socios)
 36. [Tests unitarios del backend](#36-tests-unitarios-del-backend)
+37. [Mejora: Módulo de Caja (punto de venta rápido)](#37-mejora-módulo-de-caja-punto-de-venta-rápido)
+38. [Datos de ejemplo ampliados](#38-datos-de-ejemplo-ampliados)
+39. [Mejora: Ilustración de tienda en pantalla de Inicio](#39-mejora-ilustración-de-tienda-en-pantalla-de-inicio)
 
 ---
 
@@ -4043,3 +4046,160 @@ def test_crear_socio_correcto(client):
 - PUT existente y no encontrado
 - DELETE existente y no encontrado
 - Historial de pedidos por cliente
+
+---
+
+## 37. Mejora: Módulo de Caja (punto de venta rápido)
+
+### Objetivo
+
+Una sección tipo TPV (terminal punto de venta) que permite registrar ventas directamente desde el panel, acumulando el total vendido en la sesión y reduciendo el stock automáticamente al cobrar.
+
+### Archivos implicados
+
+| Archivo | Cambio |
+|---|---|
+| `frontend/js/caja.js` | Nuevo — lógica completa del TPV |
+| `frontend/index.html` | Nav item "Caja", sección `sec-caja`, script tag |
+| `frontend/js/app.js` | Entrada `caja` en el mapa `SECCIONES` |
+| `frontend/css/estilos.css` | Estilos `.caja-grid`, `.caja-stat-big`, etc. |
+
+### Flujo de uso
+
+1. El usuario entra en **Caja** desde el menú lateral
+2. Selecciona cliente y productos con cantidad
+3. Cada producto añadido aparece en el **ticket** con subtotal
+4. Al pulsar **Cobrar →** se llama a `POST /pedidos` → el backend reduce el stock
+5. El panel **Ventas del día** suma el importe y cuenta las ventas de la sesión
+
+### caja.js — estructura
+
+```
+_cajaProductos  []   cache de productos con stock actualizado
+_cajaClientes   []   cache de clientes
+_cajaLineas     []   líneas del ticket actual
+_cajaTotalAcum  0    acumulado de ventas de la sesión
+_cajaNumVentas  0    número de ventas de la sesión
+
+cargarCaja()          carga en paralelo productos y clientes, llama a _cajaRenderUI()
+_cajaRenderUI()       dibuja los tres paneles (formulario / ticket / acumulado)
+_cajaPrecioHint()     muestra precio y stock al seleccionar producto
+_cajaAgregar()        añade línea al ticket (o suma cantidad si ya existe)
+_cajaRenderTicket()   redibuja la tabla del ticket y actualiza el total
+_cajaQuitarLinea(id)  elimina una línea del ticket
+_cajaLimpiar()        vacía el ticket sin cobrar
+_cajaCobrar()         POST /pedidos → actualiza acumulado → refresca stock → re-render
+_cajaSyncAcumulado()  restaura los contadores tras re-render (lee vars de módulo)
+```
+
+### Nota sobre persistencia del acumulado
+
+`_cajaTotalAcum` y `_cajaNumVentas` son variables de módulo (persisten mientras la página esté abierta). Tras cada cobro se llama a `_cajaRenderUI()` que reconstruye el DOM, y luego `_cajaSyncAcumulado()` repinta los contadores con los valores acumulados — así nunca se pierden entre re-renders.
+
+### Entrada en SECCIONES (app.js)
+
+```javascript
+caja: { idSeccion: 'sec-caja', cargarDatos: () => cargarCaja() },
+```
+
+### Nav item (index.html)
+
+```html
+<li><a href="#caja" class="nav-enlace" data-seccion="caja">
+  <i data-lucide="receipt"></i> Caja
+</a></li>
+```
+
+### CSS clave
+
+```css
+.caja-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 240px;
+  gap: 16px;
+  align-items: start;
+}
+.caja-stat-big {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-primario);
+}
+.caja-btn-cobrar {
+  background: var(--color-exito) !important;
+}
+@media (max-width: 900px) {
+  .caja-grid { grid-template-columns: 1fr; }
+}
+```
+
+---
+
+## 38. Datos de ejemplo ampliados
+
+### Único archivo de base de datos
+
+Todos los datos están en **`database.sql`** — un único script que crea las tablas e inserta todos los registros. No hay archivos de migración separados.
+
+### Volumen actual de datos
+
+| Tabla | Registros |
+|---|---|
+| categorias | 5 |
+| productos | 62 (12 originales + 30 adicionales + 20 nuevos) |
+| clientes | 19 (4 originales + 15 nuevos) |
+| pedidos | 18 (3 originales + 15 adicionales) |
+| detalle_pedidos | ~50 líneas |
+| socios | 52 (12 originales + 30 activos + 10 bajas) |
+
+### Cómo aplicar desde cero
+
+```bash
+mysql -u root -p < database.sql
+```
+
+### Productos por categoría
+
+- **Aviones (cat 1):** 10 modelos — acrobáticos, warbirds, reactores EDF, entrenadores
+- **Helicópteros (cat 2):** 8 modelos — colectivo variable desde 360mm hasta 700mm
+- **Drones (cat 3):** 11 modelos — FPV freestyle, cinewhoop, long range, micro indoor
+- **Radiocontrol (cat 4):** 10 modelos — emisoras de 9 a 24 canales, receptores ELRS/FrSky/TBS
+- **Accesorios (cat 5):** 12 modelos — baterías, cargadores, motores, ESC, cámaras, hélices, VTX
+
+### Clientes (19 en total)
+
+Distribuidos por ciudades de España: Madrid, Barcelona, Sevilla, Bilbao, Valencia, Zaragoza, Málaga, Murcia, Alicante, Valladolid, Córdoba, Granada, Vigo, Oviedo, Pamplona, Burgos, Santander, Toledo.
+
+### Pedidos (18 en total)
+
+- Estados: `entregado` (9), `enviado` (3), `pendiente` (3), con campos: transportista, número de seguimiento, fecha de envío/entrega, método de pago, facturado, referencia externa
+- Métodos de pago: tarjeta, transferencia, efectivo, paypal
+
+---
+
+## 39. Mejora: Ilustración de tienda en pantalla de Inicio
+
+### Objetivo
+
+Añadir una ilustración SVG de una fachada de tienda a la derecha del hero banner de la sección Inicio, haciendo la pantalla de bienvenida más visual.
+
+### Implementación
+
+SVG inline en `index.html` dentro de `.inicio-hero`, junto a `.inicio-hero-contenido`. El `.inicio-hero` ya tiene `display: flex`, solo se añade `justify-content: space-between` en el CSS.
+
+El SVG representa:
+- Fachada de tienda con toldo azul a rayas
+- Cartel "TIENDA AERO"
+- Dos escaparates: uno con un drone FPV, otro con un avión RC
+- Puerta central y faroles de calle
+
+### CSS añadido
+
+```css
+.inicio-hero { justify-content: space-between; }
+.inicio-tienda-svg {
+  flex-shrink: 0;
+  opacity: 0.9;
+  filter: drop-shadow(0 8px 32px rgba(59,130,246,0.35));
+}
+@media (max-width: 900px) { .inicio-tienda-svg { display: none; } }
+```
