@@ -46,7 +46,7 @@ async function cargarProductos() {
               : `<span class="producto-thumb-vacio"></span>`;
 
             return `
-              <tr>
+              <tr${producto.stock <= producto.stock_minimo ? ' class="fila-stock-bajo"' : ''}>
                 <td>${miniatura}</td>
                 <td>${producto.id}</td>
                 <td>${escapeHtml(producto.nombre)}</td>
