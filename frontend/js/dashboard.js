@@ -21,7 +21,7 @@ var _graficaVentas = null;
 // ----------------------------------------------------------
 async function cargarDashboard() {
   document.getElementById('dashboard-contenido').innerHTML =
-    '<div class="mensaje-estado">Cargando...</div>';
+    '<div class="mensaje-estado cargando"><span class="spinner"></span> Cargando...</div>';
   try {
     const datos = await obtenerDatos('/dashboard');
     renderizarDashboard(datos);
@@ -121,7 +121,7 @@ function renderizarDashboard(datos) {
             </div>
           </div>`;
       }).join('')
-    : '<p class="celda-vacia">Sin datos de ventas todavía</p>';
+    : '<p class="celda-vacia">📦 Sin datos de ventas todavía</p>';
 
   // ── 7. TABLA DE STOCK BAJO ───────────────────────────────────────────────
   const filasStock = numStockBajo > 0
