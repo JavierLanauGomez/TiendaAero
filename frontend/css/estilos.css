@@ -1286,3 +1286,176 @@ body {
 @media (max-width: 900px) {
   .caja-grid { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   ANIMACIONES Y MEJORAS VISUALES
+   ============================================================ */
+
+/* Fade-in suave al mostrar una sección */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.seccion:not(.oculta) {
+  animation: fadeIn 0.18s ease;
+}
+
+/* Spinner de carga */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--borde);
+  border-top-color: var(--color-primario);
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+/* Spinner pequeño en botón */
+.spinner-sm {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+  margin-right: 6px;
+}
+
+/* Botón deshabilitado */
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Micro-lift en hover de botones */
+.btn:not(:disabled):hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+
+.btn:not(:disabled):active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* Transición más suave en el botón (override del genérico) */
+.btn {
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.1s;
+}
+
+/* Toast: animación de salida */
+@keyframes slideOut {
+  from { transform: translateY(0); opacity: 1; }
+  to   { transform: translateY(10px); opacity: 0; }
+}
+.toast-saliendo {
+  animation: slideOut 0.2s ease forwards;
+}
+
+/* Focus ring mejorado en inputs */
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Mensaje de estado con spinner integrado */
+.mensaje-estado.cargando {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+
+/* Icono de estado vacío */
+.estado-vacio-icono {
+  font-size: 36px;
+  display: block;
+  margin-bottom: 10px;
+  opacity: 0.35;
+}
+
+/* Card con sombra al hover en sección inicio (más pronunciada) */
+.inicio-card:hover {
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.18);
+}
+
+/* Separador visual en sidebar antes del botón logout */
+.sidebar .nav-lista {
+  border-bottom: 1px solid #334155;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+/* ============================================================
+   FILAS CON STOCK BAJO EN TABLA DE PRODUCTOS
+   ============================================================ */
+tr.fila-stock-bajo > td {
+  background: #fff7f7;
+}
+tr.fila-stock-bajo:hover > td {
+  background: #fee2e2 !important;
+}
+
+/* ============================================================
+   HAMBURGUESA + SIDEBAR DRAWER (móvil)
+   ============================================================ */
+.btn-hamburguesa {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 150;
+  background: var(--sidebar-fondo);
+  color: var(--blanco);
+  border: none;
+  border-radius: 6px;
+  padding: 7px 9px;
+  cursor: pointer;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+.btn-hamburguesa [data-lucide] {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 130;
+}
+
+.sidebar-overlay.visible {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .btn-hamburguesa {
+    display: block;
+  }
+
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 140;
+  }
+
+  .sidebar.sidebar-abierta {
+    transform: translateX(0);
+  }
+
+  .contenido {
+    margin-left: 0;
+    padding: 56px 16px 24px;
+  }
+}

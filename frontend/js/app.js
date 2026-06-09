@@ -19,8 +19,23 @@ const SECCIONES = {
 // ----------------------------------------------------------
 // NAVEGACION
 // ----------------------------------------------------------
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  const abierta = sidebar.classList.toggle('sidebar-abierta');
+  if (overlay) overlay.classList.toggle('visible', abierta);
+}
+
 function navegarA(hash) {
   const clave = (hash || '').replace('#', '') || 'inicio';
+
+  // Cerrar sidebar en móvil al navegar
+  if (window.innerWidth <= 768) {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    if (sidebar) sidebar.classList.remove('sidebar-abierta');
+    if (overlay) overlay.classList.remove('visible');
+  }
 
   // Ocultar todas las secciones
   document.querySelectorAll('.seccion').forEach(seccion => seccion.classList.add('oculta'));
@@ -49,6 +64,12 @@ function abrirModal(titulo, contenidoHtml) {
   document.getElementById('modal-titulo').textContent = titulo;
   document.getElementById('modal-cuerpo').innerHTML = contenidoHtml;
   document.getElementById('modal').classList.remove('oculta');
+  requestAnimationFrame(() => {
+    const primer = document.querySelector(
+      '#modal-cuerpo input:not([type="hidden"]):not([disabled]), #modal-cuerpo select:not([disabled])'
+    );
+    if (primer) primer.focus();
+  });
 }
 
 function cerrarModal() {
@@ -61,6 +82,13 @@ document.getElementById('modal').addEventListener('click', function (evento) {
   if (evento.target === this) cerrarModal();
 });
 
+// Cerrar modal con tecla Escape
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && !document.getElementById('modal').classList.contains('oculta')) {
+    cerrarModal();
+  }
+});
+
 // ----------------------------------------------------------
 // TOAST (mensaje de notificacion)
 // ----------------------------------------------------------
@@ -68,15 +96,18 @@ let _temporizadorToast = null;
 
 function mostrarToast(mensaje, tipo = 'exito') {
   const toast = document.getElementById('toast');
-  toast.textContent = mensaje;
+  const icono = tipo === 'exito' ? '✓ ' : '✕ ';
+  toast.textContent = icono + mensaje;
   toast.className = `toast toast-${tipo}`;
 
-  // Cancelar el temporizador anterior si habia uno activo
   clearTimeout(_temporizadorToast);
 
-  // Ocultar despues de 3 segundos
   _temporizadorToast = setTimeout(() => {
-    toast.classList.add('oculta');
+    toast.classList.add('toast-saliendo');
+    setTimeout(() => {
+      toast.classList.add('oculta');
+      toast.classList.remove('toast-saliendo');
+    }, 200);
   }, 3000);
 }
 
@@ -107,13 +138,17 @@ function escapeHtml(texto) {
 function inicializarBuscador(inputId, contenedorTablaId) {
   const input = document.getElementById(inputId);
   if (!input) return;
+  let _timer;
   input.addEventListener('input', () => {
-    const termino = input.value.toLowerCase().trim();
-    const filas = document.querySelectorAll(`#${contenedorTablaId} tbody tr`);
-    filas.forEach(fila => {
-      const visible = termino === '' || fila.textContent.toLowerCase().includes(termino);
-      fila.style.display = visible ? '' : 'none';
-    });
+    clearTimeout(_timer);
+    _timer = setTimeout(() => {
+      const termino = input.value.toLowerCase().trim();
+      const filas = document.querySelectorAll(`#${contenedorTablaId} tbody tr`);
+      filas.forEach(fila => {
+        const visible = termino === '' || fila.textContent.toLowerCase().includes(termino);
+        fila.style.display = visible ? '' : 'none';
+      });
+    }, 150);
   });
 }
 
@@ -121,9 +156,13 @@ function inicializarBuscador(inputId, contenedorTablaId) {
 // MENSAJE DE ESTADO EN TABLA (cargando, vacio, error)
 // ----------------------------------------------------------
 function mostrarMensaje(idContenedor, texto, esError = false) {
+  const cargando = texto === 'Cargando...';
+  const contenidoHtml = cargando
+    ? `<span class="spinner"></span> Cargando...`
+    : texto;
   document.getElementById(idContenedor).innerHTML = `
-    <div class="mensaje-estado ${esError ? 'error' : ''}">
-      ${texto}
+    <div class="mensaje-estado ${esError ? 'error' : ''} ${cargando ? 'cargando' : ''}">
+      ${contenidoHtml}
     </div>
   `;
 }

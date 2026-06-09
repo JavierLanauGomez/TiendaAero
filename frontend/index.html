@@ -67,6 +67,10 @@
        APLICACION PRINCIPAL
        Oculta hasta que el usuario inicia sesion.
   ======================================================== -->
+  <button id="btn-hamburguesa" class="btn-hamburguesa" onclick="toggleSidebar()" aria-label="Abrir menú">
+    <i data-lucide="menu"></i>
+  </button>
+  <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
   <div id="app" class="oculta">
 
     <!-- BARRA LATERAL DE NAVEGACION -->
@@ -203,6 +207,9 @@
           <h1>Productos</h1>
           <div class="cabecera-acciones">
             <input class="buscador" id="buscar-productos" type="search" placeholder="Buscar producto...">
+            <button class="btn btn-secundario" onclick="exportarProductosCSV()" title="Exportar tabla a CSV">
+              <i data-lucide="download"></i> Exportar CSV
+            </button>
             <button class="btn btn-primario" onclick="abrirFormProducto()">+ Nuevo producto</button>
           </div>
         </div>

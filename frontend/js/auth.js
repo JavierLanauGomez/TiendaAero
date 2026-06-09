@@ -65,10 +65,12 @@ async function enviarLogin(evento) {
   const usuario        = document.getElementById('login-usuario').value.trim();
   const contrasena     = document.getElementById('login-contrasena').value;
   const elementoError  = document.getElementById('login-error');
+  const boton          = evento.target.querySelector('[type="submit"]');
 
   elementoError.textContent = '';
+  boton.disabled = true;
+  boton.innerHTML = '<span class="spinner spinner-sm"></span> Entrando...';
 
-  // La API de login espera form-data (estandar OAuth2), no JSON
   const cuerpo = new URLSearchParams({ username: usuario, password: contrasena });
 
   try {
@@ -88,12 +90,14 @@ async function enviarLogin(evento) {
     guardarToken(datos.access_token);
     mostrarApp();
 
-    // Arrancar la navegacion ahora que tenemos sesion
     location.hash = '#inicio';
     navegarA('#inicio');
 
   } catch (_) {
     elementoError.textContent = 'No se puede conectar con el servidor';
+  } finally {
+    boton.disabled = false;
+    boton.textContent = 'Entrar';
   }
 }
 

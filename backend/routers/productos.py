@@ -58,28 +58,37 @@ class ProductoActualizar(BaseModel):
 @enrutador.get("/productos")
 def listar_productos(
     categoria: int = None,
+    q: str = Query(default=None, max_length=100),
     pagina: int = Query(default=1, ge=1),
     tamano: int = Query(default=100, ge=1, le=500),
 ):
     offset = (pagina - 1) * tamano
+
+    condiciones: list[str] = []
+    parametros: list = []
+
+    if categoria is not None:
+        condiciones.append("categoria_id = %s")
+        parametros.append(categoria)
+
+    if q:
+        condiciones.append("(nombre LIKE %s OR marca LIKE %s)")
+        termino = f"%{q}%"
+        parametros.extend([termino, termino])
+
+    clausula_where = f"WHERE {' AND '.join(condiciones)}" if condiciones else ""
+
     with obtener_cursor(dictionary=True) as (_, cursor):
-        if categoria is None:
-            cursor.execute(
-                "SELECT * FROM productos ORDER BY id DESC LIMIT %s OFFSET %s",
-                (tamano, offset)
-            )
-        else:
-            cursor.execute(
-                "SELECT * FROM productos WHERE categoria_id = %s ORDER BY id DESC LIMIT %s OFFSET %s",
-                (categoria, tamano, offset)
-            )
+        cursor.execute(
+            f"SELECT * FROM productos {clausula_where} ORDER BY id DESC LIMIT %s OFFSET %s",
+            parametros + [tamano, offset],
+        )
         productos = cursor.fetchall()
 
-        # Total para cabecera de paginación
-        if categoria is None:
-            cursor.execute("SELECT COUNT(*) AS total FROM productos")
-        else:
-            cursor.execute("SELECT COUNT(*) AS total FROM productos WHERE categoria_id = %s", (categoria,))
+        cursor.execute(
+            f"SELECT COUNT(*) AS total FROM productos {clausula_where}",
+            parametros,
+        )
         total = cursor.fetchone()["total"]
 
     return {"productos": productos, "total": total, "pagina": pagina, "tamano": tamano}

@@ -118,12 +118,15 @@ function _cajaAgregar() {
   const prod = _cajaProductos.find(p => p.id === idP);
   if (!prod) return;
 
-  if (cant > prod.stock) {
-    mostrarToast(`Stock insuficiente (disponible: ${prod.stock})`, 'error');
+  const existente = _cajaLineas.find(l => l.producto_id === idP);
+  const cantidadEnTicket = existente ? existente.cantidad : 0;
+
+  if (cantidadEnTicket + cant > prod.stock) {
+    const disponible = prod.stock - cantidadEnTicket;
+    mostrarToast(`Stock insuficiente (disponible: ${disponible})`, 'error');
     return;
   }
 
-  const existente = _cajaLineas.find(l => l.producto_id === idP);
   if (existente) {
     existente.cantidad += cant;
   } else {
