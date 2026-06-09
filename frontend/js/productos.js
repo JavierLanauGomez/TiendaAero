@@ -179,6 +179,44 @@ async function guardarProducto(evento, id) {
 }
 
 // ----------------------------------------------------------
+// EXPORTAR CSV
+// Genera un archivo CSV con los productos actualmente cargados
+// e inicia la descarga directamente en el navegador.
+// El BOM (U+FEFF) asegura que Excel abra el CSV con UTF-8 correcto.
+// ----------------------------------------------------------
+function exportarProductosCSV() {
+  if (!_productos || _productos.length === 0) {
+    mostrarToast('No hay productos para exportar', 'error');
+    return;
+  }
+
+  const escaparCampo = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+
+  const cabeceras = ['ID', 'Nombre', 'Marca', 'Precio (€)', 'Stock', 'Stock Mínimo', 'Descripción'];
+  const filas = _productos.map(p => [
+    p.id,
+    escaparCampo(p.nombre),
+    escaparCampo(p.marca),
+    Number(p.precio).toFixed(2),
+    p.stock,
+    p.stock_minimo,
+    escaparCampo(p.descripcion),
+  ].join(','));
+
+  const csv = [cabeceras.join(','), ...filas].join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const enlace = document.createElement('a');
+  enlace.href = url;
+  enlace.download = `productos_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(enlace);
+  enlace.click();
+  document.body.removeChild(enlace);
+  URL.revokeObjectURL(url);
+  mostrarToast('CSV exportado correctamente');
+}
+
+// ----------------------------------------------------------
 // ELIMINAR (usa modal de confirmacion en lugar de confirm())
 // ----------------------------------------------------------
 async function eliminarProducto(id) {
